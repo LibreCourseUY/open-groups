@@ -10,6 +10,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      VPS_IP: ${{ secrets.VPS_IP }}
 
     steps:
       - uses: actions/checkout@v4
@@ -27,7 +29,10 @@ jobs:
           provenance: false
           tags: ghcr.io/librecourseuy/${{ github.event.repository.name }}:latest
 
+      # Auto-deploy is enabled once VPS_IP / WATCHTOWER_TOKEN / SSH_PRIVATE_KEY
+      # secrets are configured on the repository.
       - name: Trigger Watchtower via SSH tunnel
+        if: ${{ env.VPS_IP != '' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_IP }}
