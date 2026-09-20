@@ -40,6 +40,8 @@ uvicorn main:app --reload --port 8000
 | `APP_DESCRIPTION` | `Directorio de grupos`| Meta description                             |
 | `DISCLAIMER`      | _(empty)_            | Optional text for the first-visit modal       |
 | `ADMIN_PASSWORD`  | `admin123` (dev)     | Required in production                        |
+| `SECRET_KEY`      | random (dev)         | Signs admin tokens; required in production    |
+| `LOG_LEVEL`       | `INFO`               | Python logging level                          |
 | `ROOT_PATH`       | _(empty)_            | Set when serving under a subpath              |
 | `DATABASE_URL`    | `sqlite:///./groups.db` | SQLite or PostgreSQL URL                  |
 | `ENVIRONMENT`     | `DEV`                | Set to `PROD` to require production secrets   |

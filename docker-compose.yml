@@ -8,6 +8,8 @@ services:
       - APP_DESCRIPTION=${APP_DESCRIPTION:-Directorio de grupos}
       - DISCLAIMER=${DISCLAIMER:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - SECRET_KEY=${SECRET_KEY:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-DEV}
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./groups.db}
       - ROOT_PATH=${ROOT_PATH:-}

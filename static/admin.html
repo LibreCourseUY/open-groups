@@ -2,15 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#161b22">
     <title>Admin - Groups</title>
     <link rel="icon" id="favicon" type="image/svg+xml">
+    <link rel="stylesheet" id="fa-css" type="text/css">
     <script>
         const basePath = window.location.pathname.split('/').slice(0, -1).join('/') || '';
         document.getElementById('favicon').href = basePath + '/static/favicon.svg';
+        document.getElementById('fa-css').href = basePath + '/static/vendor/fontawesome/css/all.min.css';
+        document.write('<script src="' + basePath + '/static/vendor/vue.global.prod.js"><\/script>');
     </script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -670,6 +673,54 @@
 
             .group-list-item:hover {
                 background-color: #161b22;
+            }
+        }
+        /* Mobile-first hardening */
+        html {
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #app {
+            min-height: 100dvh;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                height: calc(56px + env(safe-area-inset-top));
+                padding-top: env(safe-area-inset-top);
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+            }
+
+            .main-content {
+                padding-top: calc(76px + env(safe-area-inset-top));
+                padding-bottom: calc(40px + env(safe-area-inset-bottom));
+            }
+
+            .login-container {
+                margin: 32px 12px;
+            }
+
+            input,
+            select,
+            textarea {
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                height: calc(52px + env(safe-area-inset-top));
+            }
+
+            .main-content {
+                padding-top: calc(68px + env(safe-area-inset-top));
             }
         }
     </style>

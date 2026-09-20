@@ -18,29 +18,40 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 import os
+import base64
+import hashlib
+import hmac
+import json
 import logging
 import secrets
+import time
 import httpx
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from database import ENVIRONMENT, SessionLocal, AsyncSessionLocal, Group, ImportantLink, Tag, get_db
+from database import ENVIRONMENT, Group, ImportantLink, Tag, get_db
 
 # ============================================================================
 # APPLICATION SETUP
 # ============================================================================
 
-app = FastAPI(root_path=os.getenv("ROOT_PATH", ""))
+_IS_PROD = ENVIRONMENT == "PROD"
+
+app = FastAPI(
+    root_path=os.getenv("ROOT_PATH", ""),
+    docs_url=None if _IS_PROD else "/docs",
+    redoc_url=None if _IS_PROD else "/redoc",
+    openapi_url=None if _IS_PROD else "/openapi.json",
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +59,13 @@ logger = logging.getLogger(__name__)
 APP_NAME = os.getenv("APP_NAME", "Groups")
 APP_DESCRIPTION = os.getenv("APP_DESCRIPTION", "Directorio de grupos")
 DISCLAIMER = os.getenv("DISCLAIMER", "")
+
+# Signing key for stateless admin tokens.
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if _IS_PROD:
+        raise RuntimeError("SECRET_KEY environment variable is required when ENVIRONMENT=PROD")
+    SECRET_KEY = secrets.token_urlsafe(32)
 
 _metrics_client: httpx.AsyncClient | None = None
 
@@ -60,10 +78,19 @@ async def shutdown():
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Middleware to log all incoming HTTP requests for debugging purposes."""
-    logger.debug("REQUEST: %s %s", request.method, request.url.path)
+    """Add baseline security headers and log requests at debug level."""
     response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    logger.debug("REQUEST: %s %s", request.method, request.url.path)
     return response
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
 
 
 # ============================================================================
@@ -91,10 +118,9 @@ else:
     ADMIN_PASSWORD = "admin123"
     logger.warning("Using default admin password 'admin123'. Set ADMIN_PASSWORD env var for production.")
 
-# In-memory storage for admin sessions (tokens) and IP lockout data
-# Note: In production, consider using Redis or a database for session management
+# In-memory IP lockout data. Tokens themselves are stateless (HMAC-signed)
+# so admin sessions survive restarts and multiple workers.
 lockout_data = {}
-admin_tokens: dict[str, datetime] = {}
 TOKEN_EXPIRY_HOURS = 24
 
 
@@ -109,15 +135,35 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _b64encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _sign(payload: bytes) -> str:
+    return _b64encode(hmac.new(SECRET_KEY.encode(), payload, hashlib.sha256).digest())
+
+
+def create_token() -> str:
+    payload = json.dumps({"exp": time.time() + TOKEN_EXPIRY_HOURS * 3600}).encode()
+    return f"{_b64encode(payload)}.{_sign(payload)}"
+
+
+def verify_token(token: str) -> bool:
+    try:
+        body, signature = token.split(".", 1)
+        payload = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))
+        if not hmac.compare_digest(signature, _sign(payload)):
+            return False
+        return json.loads(payload).get("exp", 0) > time.time()
+    except (ValueError, TypeError, KeyError):
+        return False
+
+
 def verify_admin(request: Request):
     auth_header = request.headers.get("Authorization", "")
     token = auth_header.replace("Bearer ", "").strip()
-    expiry = admin_tokens.get(token)
-    if expiry is None:
+    if not token or not verify_token(token):
         raise HTTPException(status_code=401, detail="Not authenticated")
-    if datetime.now() > expiry:
-        del admin_tokens[token]
-        raise HTTPException(status_code=401, detail="Token expired")
     return True
 
 
@@ -257,10 +303,23 @@ def fuzzy_search(query: str, groups: List, threshold: float = 0.3):
 # ============================================================================
 
 
+def _validate_url(value: str) -> str:
+    """Only allow http(s) URLs so stored values can't become javascript: links."""
+    value = (value or "").strip()
+    if value and not value.startswith(("http://", "https://")):
+        raise ValueError("url must start with http:// or https://")
+    return value
+
+
 class GroupCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=255)
     description: str = Field("", max_length=500)
     url: str = Field("", max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def _url(cls, value: str) -> str:
+        return _validate_url(value)
 
 
 class GroupUpdate(BaseModel):
@@ -268,6 +327,11 @@ class GroupUpdate(BaseModel):
     name: str = Field(..., min_length=3, max_length=255)
     description: str = Field("", max_length=500)
     url: str = Field("", max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def _url(cls, value: str) -> str:
+        return _validate_url(value)
 
 
 class PinGroup(BaseModel):
@@ -419,12 +483,9 @@ def admin_login(login: AdminLogin, request: Request):
             detail=detail,
         )
 
-    if login.password == ADMIN_PASSWORD:
+    if hmac.compare_digest(login.password, ADMIN_PASSWORD):
         lockout_data[client_ip] = {"attempts": 0, "locked_until": None}
-        token = secrets.token_hex(32)
-        admin_tokens[token] = datetime.now() + timedelta(hours=TOKEN_EXPIRY_HOURS)
-        logger.debug("LOGIN SUCCESS - token: %s...", token[:8])
-        return {"success": True, "message": "Admin autenticado", "token": token}
+        return {"success": True, "message": "Admin autenticado", "token": create_token()}
 
     # Failed attempt - increment counter and lock if too many attempts
     lockout_data[client_ip]["attempts"] += 1
@@ -539,12 +600,22 @@ class ImportantLinkCreate(BaseModel):
     description: str = Field("", max_length=500)
     url: str = Field(..., max_length=500)
 
+    @field_validator("url")
+    @classmethod
+    def _url(cls, value: str) -> str:
+        return _validate_url(value)
+
 
 class ImportantLinkUpdate(BaseModel):
     id: int
     title: str = Field(..., min_length=3, max_length=255)
     description: str = Field("", max_length=500)
     url: str = Field(..., max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def _url(cls, value: str) -> str:
+        return _validate_url(value)
 
 
 def link_to_dict(link: ImportantLink):
@@ -563,7 +634,7 @@ async def get_important_links(db: AsyncSession = Depends(get_db)):
     """Get all important links (public endpoint)."""
     result = await db.execute(select(ImportantLink))
     links = result.scalars().all()
-    return [link_to_dict(l) for l in links]
+    return [link_to_dict(item) for item in links]
 
 
 @app.post("/api/important-links")
@@ -658,6 +729,11 @@ async def track_view(view: ViewEvent):
 # ============================================================================
 
 
+# Mount static files at /static. This must be registered before the SPA
+# catch-all route, otherwise the catch-all shadows it and serves HTML.
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
 @app.get("/favicon.svg")
 def serve_favicon():
     """Serve the favicon SVG file."""
@@ -699,10 +775,6 @@ def serve_catch_all(path: str):
 
     # Default: serve the Vue.js SPA
     return FileResponse("static/index.html")
-
-
-# Mount static files directory at /static URL path
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")
