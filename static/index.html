@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groups</title>
+    <link rel="icon" id="favicon" type="image/svg+xml">
+    <script>
+        const basePath = window.location.pathname.split('/').slice(0, -1).join('/') || '';
+        document.getElementById('favicon').href = basePath + '/static/favicon.svg';
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #161b22;
+            color: #ffffff;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overscroll-behavior: contain;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        #app {
+            min-height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            color: #a388f3;
+            font-size: 22px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-link {
+            color: #8b949e;
+            font-size: 22px;
+            transition: color 0.2s ease;
+        }
+
+        .icon-link:hover {
+            color: #ffffff;
+        }
+
+        .create-btn {
+            background-color: #957dcd;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .create-btn:hover {
+            background-color: #a88de0;
+            transform: translateY(-1px);
+        }
+
+        .main-content {
+            padding-top: 100px;
+            padding-bottom: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+
+        .important-links-section {
+            margin-bottom: 40px;
+        }
+
+        .important-links-title {
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .important-links-grid {
+            display: grid;
+            gap: 16px;
+            padding: 0 20px 10px;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .important-links-grid.cols-1 { grid-template-columns: 1fr; }
+        .important-links-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .important-links-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+        .important-link-card {
+            background: linear-gradient(135deg, rgba(149, 125, 205, 0.15), rgba(149, 125, 205, 0.05));
+            border: 1px solid rgba(149, 125, 205, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 150px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .important-link-card:hover {
+            transform: translateY(-2px);
+            border-color: #957dcd;
+            box-shadow: 0 4px 20px rgba(149, 125, 205, 0.2);
+        }
+
+        .important-link-card .link-content {
+            flex: 1;
+        }
+
+        .important-link-card .link-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: auto;
+        }
+
+        .important-link-card .link-content {
+            flex: 1;
+        }
+
+        .important-link-card .link-btn-wrapper {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: auto;
+        }
+
+        .important-link-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .important-link-description {
+            font-size: 13px;
+            color: #8b949e;
+            text-align: center;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .important-link-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: transparent;
+            border: 1px solid #957dcd;
+            color: #957dcd;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .important-link-btn:hover {
+            background-color: #957dcd;
+            color: #161b22;
+        }
+
+        .search-container {
+            max-width: 500px;
+            margin: 0 auto 40px;
+            position: relative;
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            color: #8b949e;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 44px;
+            font-size: 15px;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            color: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: #a388f3;
+            box-shadow: 0 0 0 3px rgba(163, 136, 243, 0.2);
+        }
+
+        .search-input:focus-visible,
+        .form-input:focus-visible {
+            outline: 2px solid #957dcd;
+            outline-offset: 2px;
+        }
+
+        .search-input::placeholder {
+            color: #8b949e;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            padding: 4px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-clear:hover {
+            color: #ffffff;
+        }
+
+        .groups-grid {
+            display: grid;
+            gap: 12px;
+            padding: 0 20px 20px;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .groups-grid.cols-1 { grid-template-columns: 1fr; }
+        .groups-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .groups-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .groups-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: calc(200px + 100%) 0; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .group-card {
+            background-color: #2d333b;
+            border-radius: 16px;
+            padding: 16px 20px;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.25s ease;
+            border: 1px solid #3d444d;
+            border-left: 3px solid #957dcd;
+            display: flex;
+            flex-direction: column;
+            min-height: 120px;
+            width: 100%;
+            box-sizing: border-box;
+            animation: cardFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        .group-card:hover {
+            background-color: #373e47;
+            transform: translateY(-3px);
+            border-color: #545d68;
+            border-left-color: #a388f0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .group-card:active {
+            transform: scale(0.98);
+        }
+
+        .skeleton-card {
+            background-color: #2d333b;
+            border-radius: 16px;
+            padding: 16px 20px;
+            border: 1px solid #3d444d;
+            border-left: 3px solid #3d444d;
+            min-height: 120px;
+            animation: cardFadeIn 0.35s ease both;
+        }
+
+        .skeleton-line {
+            height: 14px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #21262d 25%, #30363d 50%, #21262d 75%);
+            background-size: 200px 100%;
+            animation: shimmer 1.5s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-line:first-child {
+            width: 60%;
+            height: 16px;
+        }
+
+        .skeleton-line:nth-child(2) {
+            width: 85%;
+        }
+
+        .skeleton-line:nth-child(3) {
+            width: 45%;
+            margin-bottom: 0;
+        }
+
+        .group-card .card-content {
+            flex: 1;
+        }
+
+        .group-card .join-btn-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        .group-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .group-description {
+            font-size: 12px;
+            color: #8b949e;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .join-btn {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #957dcd;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+            white-space: nowrap;
+            display: block;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .join-btn:hover {
+            background-color: #a88de0;
+            box-shadow: 0 2px 12px rgba(149, 125, 205, 0.3);
+        }
+
+        .join-btn:active {
+            transform: scale(0.97);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b949e;
+            animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+        }
+
+        .no-results-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #545d68;
+        }
+
+        .no-results-suggestion {
+            font-size: 13px;
+            color: #6e7681;
+            margin-top: 8px;
+        }
+
+        .search-results-count {
+            text-align: center;
+            font-size: 13px;
+            color: #6e7681;
+            margin-top: -32px;
+            margin-bottom: 16px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background-color: #21262d;
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 420px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #ffffff;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            border-color: #a388f3;
+        }
+
+        .form-input::placeholder {
+            color: #6e7681;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: #a388f3;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #a88de0;
+        }
+
+        .btn-secondary {
+            background-color: #30363d;
+            color: #ffffff;
+        }
+
+        .btn-secondary:hover {
+            background-color: #3d444d;
+        }
+
+        .error-text {
+            color: #f85149;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #a388f3;
+            color: #ffffff;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 500;
+            z-index: 300;
+            animation: toastIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .toast.toast-error {
+            background-color: #f85149;
+        }
+
+        .toast.fade-out {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        @keyframes toastIn {
+            from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+
+        .toast.fade-out {
+            animation: toastOut 0.3s ease forwards;
+        }
+
+        @keyframes toastOut {
+            to { transform: translateX(-50%) translateY(20px); opacity: 0; }
+        }
+
+        .lockout-info {
+            background-color: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85149;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #f85149;
+            font-size: 14px;
+        }
+
+        .disclaimer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .disclaimer-modal {
+            background-color: #fff0b3;
+            border: 2px solid #ffd000;
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+
+        .disclaimer-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .disclaimer-body {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 14px;
+            color: #2d2d2d;
+            line-height: 1.7;
+            margin-bottom: 24px;
+            padding-right: 8px;
+        }
+
+        .disclaimer-body p {
+            margin-bottom: 14px;
+        }
+
+        .disclaimer-accept-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 12px;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            border: 1px solid #1a1a1a;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .disclaimer-accept-btn:hover {
+            background-color: #f0f0f0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8b949e;
+        }
+
+        .pinned-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background-color: rgba(33, 188, 98, 0.15);
+            color: #a388f3;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #161b22;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3d444d;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #545d68;
+        }
+
+        @keyframes tagFadeIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes badgePopIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .tag-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+            padding: 0 4px;
+            min-height: 44px;
+        }
+
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 18px;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 100px;
+            color: #8b949e;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: tagFadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            min-height: 44px;
+            line-height: 1.2;
+        }
+
+        .tag-chip:hover {
+            border-color: #a388f3;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 12px rgba(163, 136, 243, 0.15);
+        }
+
+        .tag-chip:active {
+            transform: scale(0.96);
+        }
+
+        .tag-chip.active {
+            background: linear-gradient(135deg, rgba(163, 136, 243, 0.25), rgba(163, 136, 243, 0.1));
+            border-color: #a388f3;
+            color: #a388f3;
+            box-shadow: 0 0 20px rgba(163, 136, 243, 0.15);
+        }
+
+        .tag-chip.active:hover {
+            box-shadow: 0 2px 24px rgba(163, 136, 243, 0.25);
+        }
+
+        .group-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .group-tag-badge {
+            display: inline-flex;
+            padding: 3px 10px;
+            background-color: rgba(163, 136, 243, 0.15);
+            border: 1px solid rgba(163, 136, 243, 0.3);
+            border-radius: 100px;
+            color: #a388f3;
+            font-size: 11px;
+            font-weight: 500;
+            animation: badgePopIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+            line-height: 1.3;
+        }
+
+        .manage-btn {
+            background-color: #30363d;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .manage-btn:hover {
+            background-color: #3d444d;
+        }
+
+        .groups-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .group-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background-color: #161b22;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .group-list-info {
+            flex: 1;
+        }
+
+        .group-list-name {
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .group-list-desc {
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .pin-toggle {
+            background: none;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .pin-toggle:hover {
+            border-color: #a388f3;
+            color: #a388f3;
+        }
+
+        .pin-toggle.pinned {
+            background-color: #a388f3;
+            border-color: #a388f3;
+            color: #ffffff;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .skeleton-line {
+                animation: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 0 12px;
+                height: 56px;
+            }
+
+            .logo {
+                font-size: 17px;
+                gap: 8px;
+            }
+
+            .logo-icon {
+                font-size: 18px;
+            }
+
+            .icon-link {
+                font-size: 20px;
+            }
+
+            .create-btn {
+                padding: 8px 14px;
+                font-size: 13px;
+            }
+
+            .main-content {
+                padding-left: 12px;
+                padding-right: 12px;
+                padding-top: 76px;
+            }
+
+            .important-links-section {
+                margin-bottom: 24px;
+            }
+
+            .important-links-grid {
+                padding: 0 0 8px;
+                gap: 10px;
+            }
+
+            .important-links-grid.cols-1,
+            .important-links-grid.cols-2,
+            .important-links-grid.cols-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .important-link-card {
+                min-height: auto;
+                padding: 12px 14px;
+            }
+
+            .important-link-title {
+                font-size: 14px;
+            }
+
+            .important-link-description {
+                font-size: 12px;
+            }
+
+            .important-link-btn {
+                padding: 10px;
+                font-size: 13px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .search-container {
+                margin: 0 0 24px;
+                max-width: 100%;
+            }
+
+            .search-input {
+                padding: 14px 40px;
+                font-size: 16px;
+                border-radius: 10px;
+            }
+
+            .search-icon {
+                left: 12px;
+                font-size: 16px;
+            }
+
+            .search-clear {
+                right: 10px;
+                font-size: 16px;
+                min-width: 36px;
+                min-height: 36px;
+            }
+
+            .tag-filters {
+                gap: 6px;
+                padding: 0;
+                margin-bottom: 16px;
+            }
+
+            .tag-chip {
+                padding: 8px 14px;
+                font-size: 13px;
+                min-height: 40px;
+            }
+
+            .groups-grid {
+                padding: 0 0 16px;
+                gap: 10px;
+            }
+
+            .groups-grid.cols-1,
+            .groups-grid.cols-2,
+            .groups-grid.cols-3,
+            .groups-grid.cols-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .group-card {
+                min-height: auto;
+                padding: 14px 16px;
+                border-left-width: 3px;
+            }
+
+            .group-name {
+                font-size: 15px;
+            }
+
+            .group-description {
+                font-size: 12px;
+                -webkit-line-clamp: 3;
+                line-clamp: 3;
+            }
+
+            .group-tags {
+                margin-top: 6px;
+                gap: 3px;
+            }
+
+            .group-tag-badge {
+                font-size: 10px;
+                padding: 2px 8px;
+            }
+
+            .join-btn {
+                padding: 10px 12px;
+                font-size: 13px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .header-actions {
+                gap: 8px;
+            }
+
+            .search-results-count {
+                font-size: 12px;
+                margin-top: -10px;
+                margin-bottom: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 0 10px;
+                height: 52px;
+            }
+
+            .main-content {
+                padding-left: 10px;
+                padding-right: 10px;
+                padding-top: 68px;
+            }
+
+            .logo {
+                font-size: 15px;
+                gap: 6px;
+            }
+
+            .create-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .tag-chip {
+                padding: 6px 12px;
+                font-size: 12px;
+                min-height: 36px;
+            }
+
+            .group-card {
+                padding: 12px 14px;
+                border-radius: 12px;
+            }
+
+            .join-btn {
+                padding: 10px 12px;
+                min-height: 44px;
+            }
+
+            .search-input {
+                font-size: 16px;
+                padding: 12px 36px;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .tag-chip:hover {
+                border-color: #30363d;
+                color: #8b949e;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .tag-chip.active:hover {
+                border-color: #a388f3;
+                color: #a388f3;
+                box-shadow: 0 0 20px rgba(163, 136, 243, 0.15);
+            }
+
+            .group-card:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .join-btn:hover {
+                background-color: #957dcd;
+            }
+
+            .important-link-card:hover {
+                transform: none;
+                border-color: rgba(149, 125, 205, 0.3);
+                box-shadow: none;
+            }
+
+            .important-link-btn:hover {
+                background-color: transparent;
+                color: #957dcd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="disclaimer-overlay" v-if="showDisclaimer">
+            <div class="disclaimer-modal">
+                <h2 class="disclaimer-title">Aviso</h2>
+                <div class="disclaimer-body">
+                    <p>{{ disclaimer }}</p>
+                </div>
+                <button class="disclaimer-accept-btn" @click="acceptDisclaimer">Acepto los términos</button>
+            </div>
+        </div>
+
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-users logo-icon"></i>
+                {{ appName }}
+            </div>
+            <div class="header-actions">
+                <a href="https://github.com/LibreCourseUY/open-groups" target="_blank" class="icon-link" title="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a :href="baseUrl + '/admin'" class="create-btn">
+                    Admin
+                </a>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="important-links-section" v-if="importantLinks.length > 0">
+                <h3 class="important-links-title">Links Importantes</h3>
+                <div v-for="(row, index) in linkRows" :key="index" class="important-links-grid" :class="'cols-' + row.cols">
+                    <div class="important-link-card" v-for="link in row.items" :key="link.id">
+                        <div class="link-content">
+                            <h4 class="important-link-title">{{ link.title }}</h4>
+                            <p class="important-link-description">{{ link.description }}</p>
+                        </div>
+                        <div class="link-btn-wrapper">
+                            <a :href="link.url" target="_blank" class="important-link-btn">
+                                Ver Documento
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        class="search-input"
+                        placeholder="Buscar grupos..."
+                        aria-label="Buscar grupos"
+                        v-model="searchQuery"
+                        @input="debounceSearch"
+                    >
+                    <button class="search-clear" @click="clearSearch" v-if="searchQuery">✕</button>
+                </div>
+            </div>
+
+            <div class="tag-filters" v-if="tags.length > 0">
+                <button 
+                    v-for="(tag, i) in tags" 
+                    :key="tag.id"
+                    class="tag-chip"
+                    :class="{ active: selectedTag === tag.name }"
+                    :style="{ animationDelay: `${0.05 * i}s` }"
+                    @click="toggleTag(tag.name)"
+                >
+                    {{ tag.name }}
+                </button>
+            </div>
+
+            <div class="loading" v-if="loading">
+                <div class="groups-grid cols-4">
+                    <div class="skeleton-card" v-for="n in 8" :key="n"
+                         :style="{ animationDelay: `${0.04 * n}s` }">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div :key="`g-${selectedTag}-${searchQuery}`" v-if="!loading">
+            <div class="search-results-count" v-if="(searchQuery || selectedTag) && filteredGroups.length > 0">
+                {{ filteredGroups.length }} resultado{{ filteredGroups.length !== 1 ? 's' : '' }}
+            </div>
+
+            <div class="groups-grid" v-for="(row, index) in groupRows" :key="index" :class="'cols-' + row.cols">
+                <div class="group-card" v-for="(group, i) in row.items" :key="group.id"
+                     :style="{ animationDelay: `${0.04 * (i + 1 + index * 4)}s` }">
+                <div class="card-content">
+                    <h3 class="group-name">
+                        <span class="pinned-badge" v-if="group.pinned" aria-label="Grupo fijado">
+                            <i class="fas fa-thumbtack"></i>
+                        </span>
+                        {{ group.name }}
+                    </h3>
+                    <p class="group-description">{{ group.description }}</p>
+                    <div class="group-tags" v-if="group.tags && group.tags.length">
+                        <span class="group-tag-badge" v-for="tag in group.tags" :key="tag.id">{{ tag.name }}</span>
+                    </div>
+                </div>
+                <div class="join-btn-wrapper">
+                    <a :href="group.url" target="_blank" class="join-btn" v-if="group.url"
+                       aria-label="Unirse al grupo {{ group.name }}">
+                        Unirse al Grupo
+                    </a>
+                    <button class="join-btn" @click="joinGroup(group)" v-else
+                            aria-label="Unirse al grupo {{ group.name }}">
+                        Unirse al Grupo
+                    </button>
+                </div>
+            </div>
+            </div>
+
+            <div class="no-results" v-if="filteredGroups.length === 0">
+                <div class="no-results-icon"><i class="fas fa-search"></i></div>
+                <p v-if="searchQuery">No hay grupos que coincidan con "{{ searchQuery }}"</p>
+                <p v-else-if="selectedTag">No hay grupos con el tag "{{ selectedTag }}"</p>
+                <p v-else>Aún no hay grupos en {{ appName }}</p>
+                <p class="no-results-suggestion" v-if="searchQuery || selectedTag">Intenta con otro filtro</p>
+                <p class="no-results-suggestion" v-else>¿Eres administrador? Crea el primer grupo desde el panel</p>
+            </div>
+        </main>
+
+        <div class="toast" v-if="showToast" :class="{ 'fade-out': toastFading, 'toast-error': toastType === 'error' }">
+            <i :class="toastType === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'"></i>
+            {{ toastMessage }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const baseUrl = window.location.pathname.split('/').slice(0, -1).join('/') || '';
+                const apiUrl = (path) => `${baseUrl}${path}`;
+                
+                const groups = ref([]);
+                const importantLinks = ref([]);
+                const searchQuery = ref('');
+                const tags = ref([]);
+                const selectedTag = ref('');
+                const loading = ref(true);
+                const showModal = ref(false);
+                const modalMode = ref('login');
+                const isAdmin = ref(false);
+                const adminPassword = ref('');
+                const loginError = ref('');
+                const lockoutRemaining = ref(false);
+                const lockoutMinutes = ref(0);
+                const appName = ref('Groups');
+                const appDescription = ref('');
+                const disclaimer = ref('');
+                const showDisclaimer = ref(false);
+                const showToast = ref(false);
+                const toastMessage = ref('');
+                const toastFading = ref(false);
+                const toastType = ref('success');
+
+                const newGroup = ref({
+                    name: '',
+                    description: ''
+                });
+
+                let searchTimeout = null;
+
+                const fetchGroups = async () => {
+                    loading.value = true;
+                    try {
+                        let url = '/api/groups';
+                        const params = [];
+                        if (searchQuery.value) params.push(`q=${encodeURIComponent(searchQuery.value)}`);
+                        if (selectedTag.value) params.push(`tag=${encodeURIComponent(selectedTag.value)}`);
+                        if (params.length) url += '?' + params.join('&');
+                        const response = await fetch(apiUrl(url));
+                        groups.value = await response.json();
+                    } catch (error) {
+                        console.error('Error fetching groups:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const trackMetrics = async (eventType, metadata = {}) => {
+                    try {
+                        await fetch(apiUrl('/api/metrics/event'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ event_type: eventType, metadata })
+                        });
+                    } catch (e) {
+                        console.error('Metrics tracking failed:', e);
+                    }
+                };
+
+                const trackView = () => {
+                    try {
+                        fetch(apiUrl('/api/metrics/views'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                path: window.location.pathname,
+                                referrer: document.referrer,
+                                user_agent: navigator.userAgent,
+                                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                                document_title: document.title
+                            })
+                        });
+                    } catch (e) {
+                        console.error('View tracking failed:', e);
+                    }
+                };
+
+                const debounceSearch = () => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(fetchGroups, 200);
+                };
+
+                const clearSearch = () => {
+                    searchQuery.value = '';
+                    fetchGroups();
+                };
+
+                const fetchTags = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/tags'));
+                        tags.value = await response.json();
+                    } catch (error) {
+                        console.error('Error fetching tags:', error);
+                    }
+                };
+
+                const toggleTag = (tagName) => {
+                    selectedTag.value = selectedTag.value === tagName ? '' : tagName;
+                    fetchGroups();
+                };
+
+                const filteredGroups = computed(() => {
+                    return groups.value;
+                });
+
+                const filteredImportantLinks = computed(() => {
+                    return importantLinks.value;
+                });
+
+                const linkRows = computed(() => {
+                    const items = filteredImportantLinks.value;
+                    const rows = [];
+                    const count = items.length;
+                    
+                    if (count === 0) return rows;
+                    if (count === 1) {
+                        rows.push({ items: items.slice(0, 1), cols: 1 });
+                        return rows;
+                    }
+                    if (count === 2) {
+                        rows.push({ items: items.slice(0, 2), cols: 2 });
+                        return rows;
+                    }
+                    if (count === 3) {
+                        rows.push({ items: items.slice(0, 3), cols: 3 });
+                        return rows;
+                    }
+                    
+                    const numThrees = Math.floor(count / 3);
+                    const remainder = count % 3;
+                    
+                    if (remainder === 0) {
+                        for (let i = 0; i < numThrees; i++) {
+                            rows.push({ items: items.slice(i * 3, (i + 1) * 3), cols: 3 });
+                        }
+                    } else if (remainder === 1) {
+                        for (let i = 0; i < numThrees - 1; i++) {
+                            rows.push({ items: items.slice(i * 3, (i + 1) * 3), cols: 3 });
+                        }
+                        rows.push({ items: items.slice((numThrees - 1) * 3, (numThrees - 1) * 3 + 3), cols: 3 });
+                        rows.push({ items: items.slice(count - 1, count), cols: 1 });
+                    } else if (remainder === 2) {
+                        for (let i = 0; i < numThrees; i++) {
+                            rows.push({ items: items.slice(i * 3, (i + 1) * 3), cols: 3 });
+                        }
+                        rows.push({ items: items.slice(numThrees * 3, count), cols: 2 });
+                    }
+                    
+                    return rows;
+                });
+
+                const groupsGridClass = computed(() => {
+                    const count = filteredGroups.value.length;
+                    if (count === 0) return 'cols-1';
+                    if (count === 1) return 'cols-1';
+                    if (count === 2) return 'cols-2';
+                    if (count === 3) return 'cols-3';
+                    if (count === 4) return 'cols-4';
+                    if (count >= 5) return 'cols-4';
+                });
+
+                const groupRows = computed(() => {
+                    const items = filteredGroups.value;
+                    const rows = [];
+                    const count = items.length;
+                    
+                    if (count <= 4) {
+                        rows.push({ items: items, cols: count });
+                        return rows;
+                    }
+                    
+                    const numFours = Math.floor(count / 4);
+                    const remainder = count % 4;
+                    
+                    if (remainder === 0) {
+                        for (let i = 0; i < numFours; i++) {
+                            rows.push({ items: items.slice(i * 4, (i + 1) * 4), cols: 4 });
+                        }
+                    } else if (remainder === 1) {
+                        const fourRows = numFours - 1;
+                        for (let i = 0; i < fourRows; i++) {
+                            rows.push({ items: items.slice(i * 4, (i + 1) * 4), cols: 4 });
+                        }
+                        rows.push({ items: items.slice(fourRows * 4, fourRows * 4 + 3), cols: 3 });
+                        rows.push({ items: items.slice(fourRows * 4 + 3, fourRows * 4 + 5), cols: 2 });
+                    } else if (remainder === 2) {
+                        for (let i = 0; i < numFours; i++) {
+                            rows.push({ items: items.slice(i * 4, (i + 1) * 4), cols: 4 });
+                        }
+                        rows.push({ items: items.slice(numFours * 4), cols: 2 });
+                    } else if (remainder === 3) {
+                        for (let i = 0; i < numFours; i++) {
+                            rows.push({ items: items.slice(i * 4, (i + 1) * 4), cols: 4 });
+                        }
+                        rows.push({ items: items.slice(numFours * 4), cols: 3 });
+                    }
+                    
+                    return rows;
+                });
+
+                const acceptDisclaimer = () => {
+                    localStorage.setItem('app_terms_accepted', 'true');
+                    showDisclaimer.value = false;
+                };
+
+                const joinGroup = (group) => {
+                    trackMetrics('group_click', { group_id: group.id, group_name: group.name });
+                    showToastMessage(`Te has unido a "${group.name}"`);
+                };
+
+
+                const showToastMessage = (message, type = 'success') => {
+                    toastType.value = type;
+                    toastMessage.value = message;
+                    showToast.value = true;
+                    toastFading.value = false;
+                    setTimeout(() => {
+                        toastFading.value = true;
+                        setTimeout(() => {
+                            showToast.value = false;
+                        }, 300);
+                    }, 2500);
+                };
+
+                const checkAdminStatus = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/admin/status'));
+                        const data = await response.json();
+                        if (data.locked) {
+                            lockoutRemaining.value = true;
+                            lockoutMinutes.value = Math.ceil(data.remaining_seconds / 60);
+                        }
+                    } catch (error) {
+                        console.error('Error checking admin status:', error);
+                    }
+                };
+
+                const openCreateModal = async () => {
+                    if (isAdmin.value) {
+                        modalMode.value = 'create';
+                        showModal.value = true;
+                    } else {
+                        modalMode.value = 'login';
+                        adminPassword.value = '';
+                        loginError.value = '';
+                        showModal.value = true;
+                        checkAdminStatus();
+                    }
+                };
+
+                const openManageModal = () => {
+                    modalMode.value = 'manage';
+                    showModal.value = true;
+                };
+
+                const togglePin = async (group) => {
+                    try {
+                        const response = await fetch(apiUrl('/api/groups/pin'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ group_id: group.id, pinned: !group.pinned })
+                        });
+
+                    if (response.ok) {
+                        group.pinned = !group.pinned;
+                        showToastMessage(`"${group.name}" ${group.pinned ? 'fijado' : 'desfijado'}`);
+                    }
+                } catch (error) {
+                    showToastMessage('Error al actualizar', 'error');
+                }
+                };
+
+                const verifyAdmin = async () => {
+                    loginError.value = '';
+                    try {
+                        const response = await fetch(apiUrl('/api/admin/login'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: adminPassword.value })
+                        });
+                        
+                        if (response.ok) {
+                            isAdmin.value = true;
+                            modalMode.value = 'create';
+                            showToastMessage('Acceso admin concedido');
+                        } else {
+                            const data = await response.json();
+                            loginError.value = data.detail;
+                            showToastMessage(data.detail || 'Error de autenticación', 'error');
+                            if (data.detail.includes('bloqueada')) {
+                                lockoutRemaining.value = true;
+                                checkAdminStatus();
+                            }
+                        }
+                    } catch (error) {
+                        loginError.value = 'Error de conexión';
+                    }
+                };
+
+                const createGroup = async () => {
+                    if (newGroup.value.name.length < 3) {
+                        showToastMessage('El nombre debe tener al menos 3 caracteres', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(apiUrl('/api/groups'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(newGroup.value)
+                        });
+
+                        if (response.ok) {
+                            const group = await response.json();
+                            groups.value.unshift(group);
+                            closeModal();
+                            showToastMessage('Grupo creado exitosamente');
+                            newGroup.value = { name: '', description: '' };
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al crear grupo', 'error');
+                        }
+                    } catch (error) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+                };
+
+                const closeModal = () => {
+                    showModal.value = false;
+                    adminPassword.value = '';
+                    loginError.value = '';
+                };
+
+                onMounted(async () => {
+                    await fetchConfig();
+                    fetchGroups();
+                    fetchImportantLinks();
+                    fetchTags();
+                    trackView();
+                });
+
+                const fetchConfig = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/config'));
+                        const config = await response.json();
+                        if (config.name) {
+                            appName.value = config.name;
+                            document.title = config.name;
+                        }
+                        if (config.description) appDescription.value = config.description;
+                        if (config.disclaimer) {
+                            disclaimer.value = config.disclaimer;
+                            showDisclaimer.value = !localStorage.getItem('app_terms_accepted');
+                        }
+                    } catch (error) {
+                        console.error('Error fetching config:', error);
+                    }
+                };
+
+                const fetchImportantLinks = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/important-links'));
+                        importantLinks.value = await response.json();
+                    } catch (error) {
+                        console.error('Error fetching important links:', error);
+                    }
+                };
+
+                return {
+                    baseUrl,
+                    appName,
+                    appDescription,
+                    disclaimer,
+                    groups,
+                    importantLinks,
+                    searchQuery,
+                    tags,
+                    selectedTag,
+                    loading,
+                    filteredGroups,
+                    filteredImportantLinks,
+                    groupRows,
+                    linkRows,
+                    showModal,
+                    modalMode,
+                    isAdmin,
+                    adminPassword,
+                    loginError,
+                    lockoutRemaining,
+                    lockoutMinutes,
+                    newGroup,
+                    showDisclaimer,
+                    acceptDisclaimer,
+                    showToast,
+                    toastMessage,
+                    toastFading,
+                    toastType,
+                    debounceSearch,
+                    clearSearch,
+                    fetchTags,
+                    toggleTag,
+                    joinGroup,
+                    openCreateModal,
+                    openManageModal,
+                    togglePin,
+                    verifyAdmin,
+                    createGroup,
+                    closeModal
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

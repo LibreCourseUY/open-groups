@@ -1,0 +1,202 @@
+{
+  "format_version": 1,
+  "migration_id": "primary__0001_initial_schema",
+  "database_name": "./groups.db",
+  "database_type": "sqlite",
+  "applied_at": "2026-06-30T02:13:41Z",
+  "tables": {
+    "_dbwarden_migrations": {
+      "columns": {
+        "version": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 255
+        },
+        "description": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 500
+        },
+        "filename": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 500
+        },
+        "migration_type": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 50
+        },
+        "applied_at": {
+          "type": "timestamp",
+          "nullable": true,
+          "primary_key": false,
+          "default": "CURRENT_TIMESTAMP",
+          "autoincrement": false
+        },
+        "checksum": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 128
+        }
+      },
+      "primary_key": [],
+      "comment": null
+    },
+    "dbwarden_lock": {
+      "columns": {
+        "id": {
+          "type": "integer",
+          "nullable": true,
+          "primary_key": true,
+          "default": null,
+          "autoincrement": false
+        },
+        "locked": {
+          "type": "boolean",
+          "nullable": true,
+          "primary_key": false,
+          "default": "FALSE",
+          "autoincrement": false
+        },
+        "acquired_at": {
+          "type": "timestamp",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false
+        }
+      },
+      "primary_key": [
+        "id"
+      ],
+      "comment": null
+    },
+    "groups": {
+      "columns": {
+        "id": {
+          "type": "numeric",
+          "nullable": true,
+          "primary_key": true,
+          "default": null,
+          "autoincrement": false
+        },
+        "name": {
+          "type": "varchar",
+          "nullable": false,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 255
+        },
+        "description": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 500
+        },
+        "url": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 500
+        },
+        "pinned": {
+          "type": "boolean",
+          "nullable": true,
+          "primary_key": false,
+          "default": "FALSE",
+          "autoincrement": false
+        },
+        "created_at": {
+          "type": "timestamp",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false
+        }
+      },
+      "primary_key": [
+        "id"
+      ],
+      "comment": null
+    },
+    "important_links": {
+      "columns": {
+        "id": {
+          "type": "numeric",
+          "nullable": true,
+          "primary_key": true,
+          "default": null,
+          "autoincrement": false
+        },
+        "title": {
+          "type": "varchar",
+          "nullable": false,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 255
+        },
+        "description": {
+          "type": "varchar",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 500
+        },
+        "url": {
+          "type": "varchar",
+          "nullable": false,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false,
+          "length": 500
+        },
+        "created_at": {
+          "type": "timestamp",
+          "nullable": true,
+          "primary_key": false,
+          "default": null,
+          "autoincrement": false
+        }
+      },
+      "primary_key": [
+        "id"
+      ],
+      "comment": null
+    }
+  },
+  "enums": {},
+  "indexes": {},
+  "constraints": {
+    "dbwarden_lock.ck_dbwarden_lock_-784810569370403025": {
+      "type": "check",
+      "name": "ck_dbwarden_lock_-784810569370403025",
+      "table": "dbwarden_lock",
+      "columns": [],
+      "expression": "id = 1"
+    }
+  },
+  "checksum": "71786b96929e543ce79333f4eaa0e0f4c05eb497fe49474bed345ce31837dea9"
+}

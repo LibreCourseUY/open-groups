@@ -1,0 +1,711 @@
+"""
+OpenGroups - Main Application Entry Point
+
+This file contains the FastAPI application that powers the group directory.
+It handles HTTP requests, manages the admin authentication system, and provides
+the fuzzy search functionality for finding groups.
+
+Key Features:
+- RESTful API for CRUD operations on groups and important links
+- Admin authentication with token-based sessions and IP lockout protection
+- Fuzzy search algorithm for flexible group discovery
+- Static file serving for the Vue.js frontend
+"""
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from typing import Optional, List
+import os
+import logging
+import secrets
+import httpx
+
+logging.basicConfig(level=logging.DEBUG)
+from datetime import datetime, timedelta
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
+from database import ENVIRONMENT, SessionLocal, AsyncSessionLocal, Group, ImportantLink, Tag, get_db
+
+# ============================================================================
+# APPLICATION SETUP
+# ============================================================================
+
+app = FastAPI(root_path=os.getenv("ROOT_PATH", ""))
+
+logger = logging.getLogger(__name__)
+
+# Branding is configurable so the app can be self-hosted under any name.
+APP_NAME = os.getenv("APP_NAME", "Groups")
+APP_DESCRIPTION = os.getenv("APP_DESCRIPTION", "Directorio de grupos")
+DISCLAIMER = os.getenv("DISCLAIMER", "")
+
+_metrics_client: httpx.AsyncClient | None = None
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    if _metrics_client is not None:
+        await _metrics_client.aclose()
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Middleware to log all incoming HTTP requests for debugging purposes."""
+    logger.debug("REQUEST: %s %s", request.method, request.url.path)
+    response = await call_next(request)
+    return response
+
+
+# ============================================================================
+# BRANDING CONFIGURATION
+# ============================================================================
+
+
+@app.get("/api/config")
+def get_config():
+    """Expose configurable branding to the frontend at runtime."""
+    return {"name": APP_NAME, "description": APP_DESCRIPTION, "disclaimer": DISCLAIMER}
+
+
+# ============================================================================
+# ADMIN AUTHENTICATION CONFIGURATION
+# ============================================================================
+
+# In production, use a strong password from environment variables
+_ADMIN_PASSWORD_ENV = os.getenv("ADMIN_PASSWORD")
+if _ADMIN_PASSWORD_ENV:
+    ADMIN_PASSWORD = _ADMIN_PASSWORD_ENV
+elif ENVIRONMENT == "PROD":
+    raise RuntimeError("ADMIN_PASSWORD environment variable is required when ENVIRONMENT=PROD")
+else:
+    ADMIN_PASSWORD = "admin123"
+    logger.warning("Using default admin password 'admin123'. Set ADMIN_PASSWORD env var for production.")
+
+# In-memory storage for admin sessions (tokens) and IP lockout data
+# Note: In production, consider using Redis or a database for session management
+lockout_data = {}
+admin_tokens: dict[str, datetime] = {}
+TOKEN_EXPIRY_HOURS = 24
+
+
+def get_client_ip(request: Request) -> str:
+    """
+    Extract the client's real IP address from the request.
+    Handles proxy forwarding (X-Forwarded-For header) correctly.
+    """
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def verify_admin(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.replace("Bearer ", "").strip()
+    expiry = admin_tokens.get(token)
+    if expiry is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if datetime.now() > expiry:
+        del admin_tokens[token]
+        raise HTTPException(status_code=401, detail="Token expired")
+    return True
+
+
+def verify_admin_origin(request: Request):
+    referer = request.headers.get("Referer", "")
+    if referer and "/admin" not in referer and "/admin.html" not in referer:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+
+def verify_admin_dependency(request: Request):
+    verify_admin(request)
+    verify_admin_origin(request)
+    return True
+
+
+# ============================================================================
+# METRICS CONFIGURATION
+# ============================================================================
+
+METRICS_EVENTS_URL = os.getenv(
+    "METRICS_EVENTS_URL", "https://api.eclipselabs.com.uy/metrics/event"
+)
+METRICS_VIEWS_URL = os.getenv(
+    "METRICS_VIEWS_URL", "https://api.eclipselabs.com.uy/metrics/views"
+)
+METRICS_API_KEY = os.getenv("METRICS_API_KEY", "")
+
+_metrics_client = httpx.AsyncClient(timeout=10.0)
+
+
+class MetricsEvent(BaseModel):
+    event_type: str
+    metadata: Optional[dict] = None
+
+
+class ViewEvent(BaseModel):
+    path: str
+    referrer: Optional[str] = None
+    user_agent: Optional[str] = None
+    viewport: Optional[str] = None
+    document_title: Optional[str] = None
+
+
+# ============================================================================
+# FUZZY SEARCH ALGORITHM
+# ============================================================================
+
+
+def levenshtein_distance(s1: str, s2: str) -> int:
+    """
+    Calculate the Levenshtein distance between two strings.
+    This measures the minimum number of single-character edits needed
+    to change one string into the other.
+
+    Used by fuzzy_match to find similar words even with typos.
+    Example: "python" and "pythn" have distance 1 (one deletion)
+    """
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+    return previous_row[-1]
+
+
+def fuzzy_match(query: str, text: str, threshold: float = 0.3) -> float:
+    """
+    Perform fuzzy matching between a search query and a text string.
+    Returns a score from 0.0 to 1.0 indicating how well they match.
+
+    Matching strategy (in order):
+    1. Exact substring match: returns 1.0
+    2. Word contains query: returns 0.9
+    3. Levenshtein distance similarity: returns score based on similarity
+
+    This allows users to find groups even with typos or partial matches.
+    """
+    query = query.lower()
+    text = text.lower()
+
+    # Strategy 1: Exact substring match
+    if query in text:
+        return 1.0
+
+    # Strategy 2: Word contains query
+    words = text.split()
+    for word in words:
+        if query in word:
+            return 0.9
+
+    # Strategy 3: Levenshtein distance (typo tolerance)
+    max_score = 0.0
+    for word in words:
+        if len(word) >= len(query):
+            distance = levenshtein_distance(query, word)
+            max_len = max(len(query), len(word))
+            score = 1 - (distance / max_len)
+            if score > max_score:
+                max_score = score
+
+    if max_score >= (1 - threshold):
+        return max_score
+    return 0.0
+
+
+def fuzzy_search(query: str, groups: List, threshold: float = 0.3):
+    """
+    Search for groups using fuzzy matching on both name and description.
+    Groups are sorted by relevance score (highest first).
+
+    The description match is weighted 70% to prioritize name matches.
+    """
+    results = []
+    for group in groups:
+        name_score = fuzzy_match(query, group.name, threshold)
+        desc_score = fuzzy_match(query, group.description or "", threshold)
+        total_score = max(name_score, desc_score * 0.7)
+
+        if total_score > 0:
+            results.append((group, total_score))
+
+    results.sort(key=lambda x: x[1], reverse=True)
+    return [r[0] for r in results]
+
+
+# ============================================================================
+# Pydantic Models (Request/Response Schemas)
+# ============================================================================
+
+
+class GroupCreate(BaseModel):
+    name: str = Field(..., min_length=3, max_length=255)
+    description: str = Field("", max_length=500)
+    url: str = Field("", max_length=500)
+
+
+class GroupUpdate(BaseModel):
+    id: int
+    name: str = Field(..., min_length=3, max_length=255)
+    description: str = Field("", max_length=500)
+    url: str = Field("", max_length=500)
+
+
+class PinGroup(BaseModel):
+    group_id: int
+    pinned: bool
+
+
+class AdminLogin(BaseModel):
+    password: str
+
+
+class TagCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50)
+
+
+class GroupTagAction(BaseModel):
+    tag_id: int
+
+
+# ============================================================================
+# API Endpoints - Groups
+# ============================================================================
+
+
+@app.get("/api/groups")
+async def get_groups(q: Optional[str] = None, tag: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    """
+    Get all groups, optionally filtered by search query or tag.
+
+    If 'q' parameter is provided, uses fuzzy search to find matching groups.
+    If 'tag' parameter is provided, filters to groups that have the given tag.
+    Otherwise, returns all groups with pinned groups appearing first.
+    """
+    query = select(Group).options(selectinload(Group.tags))
+    if tag:
+        tag_list = [t.strip() for t in tag.split(",") if t.strip()]
+        if tag_list:
+            query = query.filter(Group.tags.any(Tag.name.in_(tag_list)))
+    result = await db.execute(query)
+    groups = result.scalars().all()
+
+    if q and q.strip():
+        results = fuzzy_search(q, groups)
+        return [group_to_dict(g) for g in results]
+
+    pinned = [g for g in groups if g.pinned]
+    unpinned = [g for g in groups if not g.pinned]
+    return [group_to_dict(g) for g in pinned + unpinned]
+
+
+def group_to_dict(group: Group):
+    """Convert a Group database model to a dictionary for JSON response."""
+    return {
+        "id": group.id,
+        "name": group.name,
+        "description": group.description,
+        "url": group.url,
+        "pinned": group.pinned,
+        "created_at": group.created_at.isoformat() if group.created_at else None,
+        "tags": [{"id": t.id, "name": t.name} for t in group.tags],
+    }
+
+
+@app.post("/api/groups")
+async def create_group(group: GroupCreate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    new_group = Group(
+        name=group.name, description=group.description, url=group.url, pinned=False
+    )
+    db.add(new_group)
+    await db.commit()
+    await db.refresh(new_group)
+    return group_to_dict(new_group)
+
+
+@app.put("/api/groups")
+async def update_group(group: GroupUpdate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    result = await db.execute(select(Group).filter(Group.id == group.id))
+    db_group = result.scalar_one_or_none()
+    if not db_group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+
+    db_group.name = group.name
+    db_group.description = group.description
+    db_group.url = group.url
+    await db.commit()
+    await db.refresh(db_group)
+    return {"success": True, "group": group_to_dict(db_group)}
+
+
+@app.delete("/api/groups/{group_id}")
+async def delete_group(group_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    result = await db.execute(select(Group).filter(Group.id == group_id))
+    db_group = result.scalar_one_or_none()
+    if not db_group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+
+    await db.delete(db_group)
+    await db.commit()
+    return {"success": True}
+
+
+@app.get("/api/groups/{group_id}")
+async def get_group(group_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id))
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    return group_to_dict(group)
+
+
+@app.post("/api/groups/pin")
+async def pin_group(pin_data: PinGroup, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    result = await db.execute(select(Group).filter(Group.id == pin_data.group_id))
+    db_group = result.scalar_one_or_none()
+    if not db_group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+
+    db_group.pinned = pin_data.pinned
+    await db.commit()
+    await db.refresh(db_group)
+    return {"success": True, "group": group_to_dict(db_group)}
+
+
+# ============================================================================
+# API Endpoints - Admin Authentication
+# ============================================================================
+
+
+@app.post("/api/admin/login")
+def admin_login(login: AdminLogin, request: Request):
+    client_ip = get_client_ip(request)
+
+    if client_ip not in lockout_data:
+        lockout_data[client_ip] = {"attempts": 0, "locked_until": None}
+
+    ip_data = lockout_data[client_ip]
+
+    # Check if IP is currently locked
+    if ip_data["locked_until"] and datetime.now() < ip_data["locked_until"]:
+        remaining = (ip_data["locked_until"] - datetime.now()).total_seconds()
+        hours = int(remaining // 3600)
+        minutes = int((remaining % 3600) // 60)
+        if hours > 0:
+            detail = f"Cuenta bloqueada. Intenta en {hours} hora(s)"
+        else:
+            detail = f"Cuenta bloqueada. Intenta en {minutes} minutos"
+        raise HTTPException(
+            status_code=403,
+            detail=detail,
+        )
+
+    if login.password == ADMIN_PASSWORD:
+        lockout_data[client_ip] = {"attempts": 0, "locked_until": None}
+        token = secrets.token_hex(32)
+        admin_tokens[token] = datetime.now() + timedelta(hours=TOKEN_EXPIRY_HOURS)
+        logger.debug("LOGIN SUCCESS - token: %s...", token[:8])
+        return {"success": True, "message": "Admin autenticado", "token": token}
+
+    # Failed attempt - increment counter and lock if too many attempts
+    lockout_data[client_ip]["attempts"] += 1
+    if lockout_data[client_ip]["attempts"] >= 3:
+        lockout_data[client_ip]["locked_until"] = datetime.now() + timedelta(hours=24)
+        raise HTTPException(
+            status_code=403, detail="Demasiados intentos. Cuenta bloqueada por 24 horas"
+        )
+
+    raise HTTPException(
+        status_code=401,
+        detail=f"Contraseña incorrecta. Intentos: {lockout_data[client_ip]['attempts']}/3",
+    )
+
+
+@app.get("/api/admin/status")
+def admin_status(request: Request):
+    """
+    Check the lockout status for the current IP.
+    Useful for the admin UI to show lockout countdown.
+    """
+    client_ip = get_client_ip(request)
+
+    if client_ip in lockout_data:
+        ip_data = lockout_data[client_ip]
+        if ip_data["locked_until"] and datetime.now() < ip_data["locked_until"]:
+            remaining = int((ip_data["locked_until"] - datetime.now()).total_seconds())
+            return {
+                "locked": True,
+                "remaining_seconds": remaining,
+                "attempts": ip_data["attempts"],
+            }
+        return {"locked": False, "attempts": ip_data["attempts"]}
+
+    return {"locked": False, "attempts": 0}
+
+
+# ============================================================================
+# API Endpoints - Tags
+# ============================================================================
+
+
+@app.get("/api/tags")
+async def get_tags(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Tag).order_by(Tag.name))
+    tags = result.scalars().all()
+    return [{"id": t.id, "name": t.name, "created_at": t.created_at.isoformat() if t.created_at else None} for t in tags]
+
+
+@app.post("/api/tags")
+async def create_tag(tag: TagCreate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    existing = await db.execute(select(Tag).filter(Tag.name == tag.name))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Tag ya existe")
+    new_tag = Tag(name=tag.name)
+    db.add(new_tag)
+    await db.commit()
+    await db.refresh(new_tag)
+    return {"id": new_tag.id, "name": new_tag.name}
+
+
+@app.delete("/api/tags/{tag_id}")
+async def delete_tag(tag_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    result = await db.execute(select(Tag).filter(Tag.id == tag_id))
+    tag = result.scalar_one_or_none()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+    await db.delete(tag)
+    await db.commit()
+    return {"success": True}
+
+
+@app.post("/api/groups/{group_id}/tags")
+async def add_group_tag(group_id: int, action: GroupTagAction, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    result = await db.execute(select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id))
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    result = await db.execute(select(Tag).filter(Tag.id == action.tag_id))
+    tag = result.scalar_one_or_none()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+    if tag not in group.tags:
+        group.tags.append(tag)
+        await db.commit()
+    return {"success": True}
+
+
+@app.delete("/api/groups/{group_id}/tags/{tag_id}")
+async def remove_group_tag(group_id: int, tag_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+    result = await db.execute(select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id))
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    result = await db.execute(select(Tag).filter(Tag.id == tag_id))
+    tag = result.scalar_one_or_none()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag no encontrado")
+    if tag in group.tags:
+        group.tags.remove(tag)
+        await db.commit()
+    return {"success": True}
+
+
+# ============================================================================
+# API Endpoints - Important Links
+# ============================================================================
+
+
+class ImportantLinkCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=255)
+    description: str = Field("", max_length=500)
+    url: str = Field(..., max_length=500)
+
+
+class ImportantLinkUpdate(BaseModel):
+    id: int
+    title: str = Field(..., min_length=3, max_length=255)
+    description: str = Field("", max_length=500)
+    url: str = Field(..., max_length=500)
+
+
+def link_to_dict(link: ImportantLink):
+    """Convert an ImportantLink database model to a dictionary for JSON response."""
+    return {
+        "id": link.id,
+        "title": link.title,
+        "description": link.description,
+        "url": link.url,
+        "created_at": link.created_at.isoformat() if link.created_at else None,
+    }
+
+
+@app.get("/api/important-links")
+async def get_important_links(db: AsyncSession = Depends(get_db)):
+    """Get all important links (public endpoint)."""
+    result = await db.execute(select(ImportantLink))
+    links = result.scalars().all()
+    return [link_to_dict(l) for l in links]
+
+
+@app.post("/api/important-links")
+async def create_important_link(
+    link: ImportantLinkCreate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)
+):
+    new_link = ImportantLink(
+        title=link.title, description=link.description, url=link.url
+    )
+    db.add(new_link)
+    await db.commit()
+    await db.refresh(new_link)
+    return link_to_dict(new_link)
+
+
+@app.put("/api/important-links")
+async def update_important_link(
+    link: ImportantLinkUpdate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)
+):
+    result = await db.execute(select(ImportantLink).filter(ImportantLink.id == link.id))
+    db_link = result.scalar_one_or_none()
+    if not db_link:
+        raise HTTPException(status_code=404, detail="Link no encontrado")
+
+    db_link.title = link.title
+    db_link.description = link.description
+    db_link.url = link.url
+    await db.commit()
+    await db.refresh(db_link)
+    return {"success": True, "link": link_to_dict(db_link)}
+
+
+@app.delete("/api/important-links/{link_id}")
+async def delete_important_link(
+    link_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)
+):
+    result = await db.execute(select(ImportantLink).filter(ImportantLink.id == link_id))
+    db_link = result.scalar_one_or_none()
+    if not db_link:
+        raise HTTPException(status_code=404, detail="Link no encontrado")
+
+    await db.delete(db_link)
+    await db.commit()
+    return {"success": True}
+
+
+# ============================================================================
+# Metrics Endpoints
+# ============================================================================
+
+
+@app.post("/api/metrics/event")
+async def track_event(event: MetricsEvent):
+    if not METRICS_API_KEY:
+        return {"status": "skipped", "reason": "Metrics not configured"}
+
+    try:
+        response = await _metrics_client.post(
+            METRICS_EVENTS_URL,
+            json={"event_type": event.event_type, "metadata": event.metadata or {}},
+            headers={"X-API-Key": METRICS_API_KEY},
+        )
+        if response.status_code == 200:
+            return {"status": "ok"}
+        return {"status": "error", "detail": response.text}
+    except Exception as e:
+        logger.error(f"Metrics tracking failed: {e}")
+        return {"status": "error", "detail": str(e)}
+
+
+@app.post("/api/metrics/views")
+async def track_view(view: ViewEvent):
+    if not METRICS_API_KEY:
+        return {"status": "skipped", "reason": "Metrics not configured"}
+
+    try:
+        response = await _metrics_client.post(
+            METRICS_VIEWS_URL,
+            json=view.model_dump(exclude_none=True),
+            headers={"X-API-Key": METRICS_API_KEY},
+        )
+        if response.status_code == 200:
+            return {"status": "ok"}
+        return {"status": "error", "detail": response.text}
+    except Exception as e:
+        logger.error(f"View tracking failed: {e}")
+        return {"status": "error", "detail": str(e)}
+
+
+# ============================================================================
+# Static File Serving
+# ============================================================================
+
+
+@app.get("/favicon.svg")
+def serve_favicon():
+    """Serve the favicon SVG file."""
+    logger = logging.getLogger(__name__)
+    logger.debug("FAVICON REQUEST - root_path: %s", app.root_path)
+    return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+
+
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+def serve_catch_all(path: str):
+    """
+    Catch-all route for SPA (Single Page Application) routing.
+
+    This ensures that Vue.js handles all routing on the client side.
+    The server serves index.html for any unknown paths, and Vue.js
+    determines which component to render based on the URL.
+
+    Security checks prevent directory traversal attacks.
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug("CATCH-ALL REQUEST - path: %s, root_path: %s", path, app.root_path)
+
+    # Security: prevent directory traversal
+    if ".." in path or path.startswith("/") or "\x00" in path:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # Don't serve API routes through SPA handler
+    if path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # Handle favicon specially
+    if path.endswith("favicon.svg") or "favicon.svg" in path:
+        logger.debug("FAVICON MATCH in catch-all!")
+        return FileResponse("static/favicon.svg", media_type="image/svg+xml")
+
+    # Admin routes
+    if path == "admin" or path.startswith("admin/"):
+        return FileResponse("static/admin.html")
+
+    # Default: serve the Vue.js SPA
+    return FileResponse("static/index.html")
+
+
+# Mount static files directory at /static URL path
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/")
+def serve_index_root():
+    """Serve the main index.html for the root URL."""
+    return FileResponse("static/index.html")

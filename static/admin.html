@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Groups</title>
+    <link rel="icon" id="favicon" type="image/svg+xml">
+    <script>
+        const basePath = window.location.pathname.split('/').slice(0, -1).join('/') || '';
+        document.getElementById('favicon').href = basePath + '/static/favicon.svg';
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #161b22;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        #app {
+            min-height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid #30363d;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            color: #957dcd;
+            font-size: 22px;
+        }
+
+        .logout-btn {
+            background-color: #30363d;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background-color: #f85149;
+        }
+
+        .main-content {
+            padding-top: 100px;
+            padding-bottom: 40px;
+            max-width: 900px;
+            margin: 0 auto;
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background-color: #21262d;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #ffffff;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #957dcd;
+        }
+
+        .form-input:focus-visible {
+            outline: 2px solid #957dcd;
+            outline-offset: 2px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: #957dcd;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background-color: #a88de0;
+        }
+
+        .btn-secondary {
+            background-color: #30363d;
+            color: #ffffff;
+            margin-top: 12px;
+        }
+
+        .error-container {
+            min-height: 22px;
+            margin-top: 8px;
+        }
+
+        .error-text {
+            color: #f85149;
+            font-size: 13px;
+        }
+
+        .lockout-info {
+            background-color: rgba(248, 81, 73, 0.1);
+            border: 1px solid #f85149;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #f85149;
+            font-size: 14px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #161b22;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3d444d;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #545d68;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #957dcd;
+            color: #ffffff;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 500;
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .toast.toast-error {
+            background-color: #f85149;
+        }
+
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .panel-section {
+            background-color: #21262d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .groups-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .group-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background-color: #161b22;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .group-list-info {
+            flex: 1;
+        }
+
+        .group-list-name {
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .group-list-desc {
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .pin-toggle {
+            background: none;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .pin-toggle:hover {
+            border-color: #957dcd;
+            color: #957dcd;
+        }
+
+        .pin-toggle.pinned {
+            background-color: #957dcd;
+            border-color: #957dcd;
+            color: #ffffff;
+        }
+
+        .create-group-form {
+            display: grid;
+            gap: 16px;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab:hover {
+            border-color: #957dcd;
+            color: #ffffff;
+        }
+
+        .nav-tab.active {
+            background-color: #957dcd;
+            border-color: #957dcd;
+            color: #ffffff;
+            box-shadow: 0 2px 12px rgba(149, 125, 205, 0.3);
+        }
+
+        .group-list-url {
+            font-size: 12px;
+            color: #957dcd;
+            margin-top: 4px;
+        }
+
+        .group-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: none;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            border-color: #8b949e;
+            color: #ffffff;
+        }
+
+        .edit-btn:hover {
+            border-color: #957dcd;
+            color: #957dcd;
+        }
+
+        .delete-btn:hover {
+            border-color: #f85149;
+            color: #f85149;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-actions .btn {
+            flex: 1;
+        }
+
+        .btn-danger {
+            background-color: #f85149;
+            color: #ffffff;
+        }
+
+        .btn-danger:hover {
+            background-color: #da3633;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .modal {
+            background-color: #21262d;
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+        }
+
+        .group-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .group-tag-badge {
+            display: inline-flex;
+            padding: 2px 8px;
+            background-color: rgba(149, 125, 205, 0.15);
+            border: 1px solid rgba(149, 125, 205, 0.3);
+            border-radius: 10px;
+            color: #957dcd;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .tag-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-option {
+            padding: 8px 16px;
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 100px;
+            color: #8b949e;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            line-height: 1.2;
+        }
+
+        .tag-option:hover {
+            border-color: #957dcd;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .tag-option:active {
+            transform: scale(0.96);
+        }
+
+        .tag-option.selected {
+            background: linear-gradient(135deg, rgba(149, 125, 205, 0.25), rgba(149, 125, 205, 0.1));
+            border-color: #957dcd;
+            color: #957dcd;
+            box-shadow: 0 0 16px rgba(149, 125, 205, 0.12);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 0 12px;
+                height: 56px;
+            }
+
+            .logo {
+                font-size: 16px;
+                gap: 8px;
+            }
+
+            .main-content {
+                padding-left: 12px;
+                padding-right: 12px;
+                padding-top: 76px;
+                max-width: 100%;
+            }
+
+            .login-container {
+                margin: 60px 12px;
+                padding: 24px 20px;
+            }
+
+            .nav-tabs {
+                gap: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+            }
+
+            .nav-tab {
+                padding: 10px 14px;
+                font-size: 13px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            .panel-section {
+                padding: 16px;
+            }
+
+            .panel-title {
+                font-size: 16px;
+            }
+
+            .group-list-item {
+                padding: 12px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .group-list-name {
+                font-size: 14px;
+            }
+
+            .group-list-desc {
+                font-size: 12px;
+            }
+
+            .group-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .action-btn {
+                padding: 8px 12px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .pin-toggle {
+                padding: 8px 14px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+
+            .btn {
+                padding: 14px;
+                font-size: 14px;
+                min-height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .form-input {
+                font-size: 16px;
+                padding: 12px 14px;
+                min-height: 48px;
+            }
+
+            .tag-selector {
+                gap: 6px;
+            }
+
+            .tag-option {
+                padding: 8px 14px;
+                font-size: 12px;
+                min-height: 40px;
+            }
+
+            .modal {
+                padding: 24px;
+                width: 95%;
+                max-width: 360px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 0 10px;
+                height: 52px;
+            }
+
+            .logo {
+                font-size: 14px;
+                gap: 6px;
+            }
+
+            .main-content {
+                padding-left: 10px;
+                padding-right: 10px;
+                padding-top: 68px;
+            }
+
+            .panel-section {
+                padding: 12px;
+            }
+
+            .nav-tab {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+
+            .tag-option {
+                font-size: 11px;
+                padding: 6px 12px;
+                min-height: 36px;
+            }
+
+            .form-input {
+                font-size: 16px;
+                padding: 10px 12px;
+                min-height: 44px;
+            }
+
+            .btn {
+                padding: 12px;
+                min-height: 44px;
+                font-size: 13px;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .tag-option:hover {
+                border-color: #30363d;
+                color: #8b949e;
+                transform: none;
+            }
+
+            .tag-option.selected:hover {
+                border-color: #957dcd;
+                color: #957dcd;
+                transform: none;
+            }
+
+            .action-btn:hover {
+                border-color: #30363d;
+                color: #8b949e;
+            }
+
+            .pin-toggle:hover {
+                border-color: #30363d;
+                color: #8b949e;
+            }
+
+            .group-list-item:hover {
+                background-color: #161b22;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-users logo-icon"></i>
+                Admin Panel
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a :href="baseUrl || '/'" style="color: #8b949e; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+                <button class="logout-btn" @click="logout" v-if="isAdmin">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="login-container" v-if="!isAdmin">
+                <h2 class="login-title">Acceso Admin</h2>
+                
+                <div class="lockout-info" v-if="lockoutRemaining">
+                    Cuenta bloqueada. Intenta en {{ lockoutTimeRemaining }}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="admin-password">Contraseña de Admin</label>
+                    <input 
+                        id="admin-password"
+                        type="password" 
+                        class="form-input" 
+                        placeholder="Ingresa la contraseña"
+                        v-model="password"
+                        @keyup.enter="login"
+                        :disabled="lockoutRemaining"
+                        autocomplete="current-password"
+                    >
+                    <div class="error-container">
+                        <p class="error-text" v-if="error">{{ error }}</p>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" @click="login" :disabled="lockoutRemaining">
+                    Ingresar
+                </button>
+
+                <a href="." class="btn btn-secondary" style="display: block; text-align: center; text-decoration: none;">
+                    Volver al inicio
+                </a>
+            </div>
+
+            <div class="admin-panel" :class="{ active: isAdmin }">
+                <div class="nav-tabs">
+                    <button class="nav-tab" :class="{ active: activeTab === 'manage' }" @click="activeTab = 'manage'">
+                        <i class="fas fa-users"></i> Grupos
+                    </button>
+                    <button class="nav-tab" :class="{ active: activeTab === 'links' }" @click="activeTab = 'links'">
+                        <i class="fas fa-link"></i> Links
+                    </button>
+                    <button class="nav-tab" :class="{ active: activeTab === 'tags' }" @click="activeTab = 'tags'; fetchTags()">
+                        <i class="fas fa-tags"></i> Tags
+                    </button>
+                    <button class="nav-tab" :class="{ active: activeTab === 'create' }" @click="activeTab = 'create'">
+                        <i class="fas fa-plus"></i> Crear
+                    </button>
+                </div>
+
+                <div class="panel-section" v-if="activeTab === 'manage'">
+                    <h3 class="panel-title">Administrar Grupos</h3>
+                    <div class="search-box" style="margin-bottom: 20px;">
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            placeholder="Buscar grupos..." 
+                            aria-label="Buscar grupos"
+                            v-model="searchQuery"
+                        >
+                    </div>
+                    <div class="groups-list">
+                        <div class="group-list-item" v-for="group in filteredGroups" :key="group.id">
+                            <div class="group-list-info">
+                                <div class="group-list-name">{{ group.name }}</div>
+                                <div class="group-list-desc">{{ group.description }}</div>
+                                <div class="group-list-url" v-if="group.url">{{ group.url }}</div>
+                                <div class="group-tags" v-if="group.tags && group.tags.length">
+                                    <span class="group-tag-badge" v-for="tag in group.tags" :key="tag.id">{{ tag.name }}</span>
+                                </div>
+                            </div>
+                            <div class="group-actions">
+                                <button 
+                                    class="pin-toggle" 
+                                    :class="{ pinned: group.pinned }"
+                                    @click="togglePin(group)"
+                                    :title="group.pinned ? 'Desfijar' : 'Fijar'"
+                                    :aria-label="group.pinned ? 'Desfijar grupo' : 'Fijar grupo'"
+                                >
+                                    <i class="fas fa-thumbtack"></i>
+                                </button>
+                                <button class="action-btn edit-btn" @click="editGroup(group)" title="Editar" aria-label="Editar grupo">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn delete-btn" @click="confirmDelete(group)" title="Eliminar" aria-label="Eliminar grupo">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section" v-if="activeTab === 'create'">
+                    <h3 class="panel-title">{{ editingGroup ? 'Editar Grupo' : 'Crear Nuevo Grupo' }}</h3>
+                    <div class="create-group-form">
+                        <div class="form-group">
+                            <label class="form-label" for="group-name">Nombre del Grupo</label>
+                            <input 
+                                id="group-name"
+                                type="text" 
+                                class="form-input" 
+                                placeholder="Ej: Desarrolladores Web"
+                                v-model="newGroup.name"
+                                autocomplete="off"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="group-desc">Descripción</label>
+                            <textarea 
+                                id="group-desc"
+                                class="form-input" 
+                                placeholder="Describe el propósito del grupo"
+                                v-model="newGroup.description"
+                            ></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="group-url">URL del Grupo</label>
+                            <input 
+                                id="group-url"
+                                type="url" 
+                                class="form-input" 
+                                placeholder="https://chat.example.com/grupo"
+                                v-model="newGroup.url"
+                                autocomplete="url"
+                            >
+                        </div>
+                        <div class="form-group" v-if="tags.length">
+                            <label class="form-label">Tags</label>
+                            <div class="tag-selector">
+                                <button 
+                                    v-for="tag in tags" 
+                                    :key="tag.id"
+                                    class="tag-option"
+                                    :class="{ selected: selectedTagIds.includes(tag.id) }"
+                                    @click="toggleTagSelection(tag.id)"
+                                >
+                                    {{ tag.name }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="btn btn-secondary" @click="cancelEdit" v-if="editingGroup">
+                                Cancelar
+                            </button>
+                            <button class="btn btn-primary" @click="editingGroup ? updateGroup() : createGroup()">
+                                {{ editingGroup ? 'Guardar Cambios' : 'Crear Grupo' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section" v-if="activeTab === 'links'">
+                    <h3 class="panel-title">Links Importantes</h3>
+                    <div class="groups-list">
+                        <div class="group-list-item" v-for="link in importantLinks" :key="link.id">
+                            <div class="group-list-info">
+                                <div class="group-list-name">{{ link.title }}</div>
+                                <div class="group-list-desc">{{ link.description }}</div>
+                                <div class="group-list-url">{{ link.url }}</div>
+                            </div>
+                            <div class="group-actions">
+                                <button class="action-btn edit-btn" @click="editLink(link)" title="Editar" aria-label="Editar link">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn delete-btn" @click="confirmDeleteLink(link)" title="Eliminar" aria-label="Eliminar link">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #30363d;">
+                        <h4 style="font-size: 14px; color: #8b949e; margin-bottom: 12px;">{{ editingLink ? 'Editar Link' : 'Nuevo Link' }}</h4>
+                        <div class="create-group-form">
+                            <div class="form-group">
+                                <label class="form-label" for="link-title">Título</label>
+                                <input id="link-title" type="text" class="form-input" placeholder="Ej: Reglamento" v-model="newLink.title" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="link-desc">Descripción</label>
+                                <textarea id="link-desc" class="form-input" placeholder="Descripción breve" v-model="newLink.description"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="link-url">URL</label>
+                                <input id="link-url" type="url" class="form-input" placeholder="https://docs.example.com/reglamento" v-model="newLink.url" autocomplete="url">
+                            </div>
+                            <div class="form-actions">
+                                <button class="btn btn-secondary" @click="cancelLinkEdit" v-if="editingLink">Cancelar</button>
+                                <button class="btn btn-primary" @click="editingLink ? updateLink() : createLink()">
+                                    {{ editingLink ? 'Guardar' : 'Agregar Link' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <div class="panel-section" v-if="activeTab === 'tags'">
+                    <h3 class="panel-title">Administrar Tags</h3>
+                    <div class="groups-list">
+                        <div class="group-list-item" v-for="tag in tags" :key="tag.id">
+                            <div class="group-list-info">
+                                <div class="group-list-name">{{ tag.name }}</div>
+                            </div>
+                            <div class="group-actions">
+                                <button class="action-btn delete-btn" @click="deleteTag(tag)" title="Eliminar" aria-label="Eliminar tag">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #30363d;">
+                        <h4 style="font-size: 14px; color: #8b949e; margin-bottom: 12px;">Nuevo Tag</h4>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="text" class="form-input" style="flex: 1;" placeholder="Nombre del tag" v-model="newTagName" @keyup.enter="createTag" maxlength="50">
+                            <button class="btn btn-primary" style="flex: 0 0 auto; padding: 12px 24px; width: auto;" @click="createTag">Agregar</button>
+                        </div>
+                        <div class="error-container">
+                            <p class="error-text" v-if="tagError">{{ tagError }}</p>
+                        </div>
+                    </div>
+                </div>
+
+            <div class="modal-overlay" v-if="showDeleteConfirm">
+                <div class="modal">
+                    <h3 class="modal-title">Confirmar Eliminación</h3>
+                    <p style="color: #8b949e; text-align: center; margin-bottom: 20px;">
+                        ¿Estás seguro de eliminar "{{ groupToDelete?.name }}"?
+                    </p>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" @click="showDeleteConfirm = false">Cancelar</button>
+                        <button class="btn btn-danger" @click="deleteGroup">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" v-if="showDeleteLinkConfirm">
+                <div class="modal">
+                    <h3 class="modal-title">Confirmar Eliminación</h3>
+                    <p style="color: #8b949e; text-align: center; margin-bottom: 20px;">
+                        ¿Estás seguro de eliminar "{{ linkToDelete?.title }}"?
+                    </p>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" @click="showDeleteLinkConfirm = false">Cancelar</button>
+                        <button class="btn btn-danger" @click="deleteLink">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="toast" v-if="showToast" :class="{ 'toast-error': toastType === 'error' }">
+            <i :class="toastType === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'"></i>
+            {{ toastMessage }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted, computed } = Vue;
+
+        createApp({
+            setup() {
+                const password = ref('');
+                const isAdmin = ref(false);
+                const error = ref('');
+                const lockoutRemaining = ref(false);
+                const lockoutTimeRemaining = ref(0);
+                const groups = ref([]);
+                const activeTab = ref('manage');
+                const showToast = ref(false);
+                const toastMessage = ref('');
+                const toastType = ref('success');
+                const editingGroup = ref(null);
+                const groupToDelete = ref(null);
+                const showDeleteConfirm = ref(false);
+                const importantLinks = ref([]);
+                const tags = ref([]);
+                const selectedTagIds = ref([]);
+                const newTagName = ref('');
+                const tagError = ref('');
+                const editingLink = ref(null);
+                const linkToDelete = ref(null);
+                const showDeleteLinkConfirm = ref(false);
+                const token = ref('');
+                const searchQuery = ref('');
+                const lockoutInterval = ref(null);
+
+                const baseUrl = window.location.pathname.split('/').slice(0, -1).join('/') || '';
+                const apiUrl = (path) => `${baseUrl}${path}`;
+
+                const authHeaders = () => ({
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token.value}`
+                });
+
+                const newGroup = ref({
+                    name: '',
+                    description: '',
+                    url: ''
+                });
+
+                const newLink = ref({
+                    title: '',
+                    description: '',
+                    url: ''
+                });
+
+                const showToastMessage = (message, type = 'success') => {
+                    toastType.value = type;
+                    toastMessage.value = message;
+                    showToast.value = true;
+                    setTimeout(() => {
+                        showToast.value = false;
+                    }, 2500);
+                };
+
+                const checkLockout = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/admin/status'));
+                        const data = await response.json();
+                        if (data.locked) {
+                            lockoutRemaining.value = true;
+                            let tiempo = data.remaining_seconds;
+                            lockoutTimeRemaining.value = timeToText(tiempo);
+                            let updateTime = 1000;
+                            lockoutInterval.value = setInterval(()=>{
+                                lockoutTimeRemaining.value = timeToText(tiempo);
+                                if(tiempo < 0){
+                                    window.location.reload();
+                                    clearInterval(lockoutInterval.value);
+                                }
+                                tiempo -= updateTime / 1000;
+                            }, updateTime)
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                };
+                function timeToText(time){
+                    let hours = Math.floor(time / 3600);
+                    let minutes = Math.floor((time % 3600) / 60);
+                    let seconds = Math.floor(time % 60);
+                    return `${hours} horas ${minutes} minutos y ${seconds} segundos`;
+                };
+
+                const login = async () => {
+                    error.value = '';
+                    try {
+                        const response = await fetch(apiUrl('/api/admin/login'), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: password.value })
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            token.value = data.token;
+                            localStorage.setItem('adminToken', data.token);
+                            isAdmin.value = true;
+                            fetchGroups();
+                        } else {
+                            const data = await response.json();
+                            error.value = data.detail;
+                            if (data.detail.includes('bloqueada')) {
+                                lockoutRemaining.value = true;
+                                checkLockout();
+                            }
+                        }
+                    } catch (e) {
+                        error.value = 'Error de conexión';
+                    }
+                };
+
+                const logout = () => {
+                    isAdmin.value = false;
+                    token.value = '';
+                    localStorage.removeItem('adminToken');
+                    password.value = '';
+                    activeTab.value = 'manage';
+                };
+
+                const checkStoredToken = () => {
+                    const stored = localStorage.getItem('adminToken');
+                    if (stored) {
+                        token.value = stored;
+                        isAdmin.value = true;
+                        fetchGroups();
+                    }
+                };
+
+                const fetchGroups = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/groups'));
+                        groups.value = await response.json();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                };
+
+                const filteredGroups = computed(() => {
+                    if (!searchQuery.value.trim()) return groups.value;
+                    const query = searchQuery.value.toLowerCase();
+                    return groups.value.filter(g => 
+                        g.name.toLowerCase().includes(query) || 
+                        (g.description && g.description.toLowerCase().includes(query))
+                    );
+                });
+
+                onMounted(() => {
+                    checkStoredToken();
+                });
+
+                const togglePin = async (group) => {
+                    try {
+                        const response = await fetch(apiUrl('/api/groups/pin'), {
+                            method: 'POST',
+                            headers: authHeaders(),
+                            body: JSON.stringify({ group_id: group.id, pinned: !group.pinned })
+                        });
+
+                        if (response.ok) {
+                            group.pinned = !group.pinned;
+                            showToastMessage(`"${group.name}" ${group.pinned ? 'fijado' : 'desfijado'}`);
+                        }
+                    } catch (e) {
+                        showToastMessage('Error al actualizar', 'error');
+                    }
+                };
+
+                const syncGroupTags = async (groupId, selectedIds) => {
+                    try {
+                        const response = await fetch(apiUrl(`/api/groups/${groupId}`));
+                        const group = await response.json();
+                        const currentIds = (group.tags || []).map(t => t.id);
+                        const toAdd = selectedIds.filter(id => !currentIds.includes(id));
+                        const toRemove = currentIds.filter(id => !selectedIds.includes(id));
+                        for (const tagId of toAdd) {
+                            await fetch(apiUrl(`/api/groups/${groupId}/tags`), {
+                                method: 'POST',
+                                headers: authHeaders(),
+                                body: JSON.stringify({ tag_id: tagId })
+                            });
+                        }
+                        for (const tagId of toRemove) {
+                            await fetch(apiUrl(`/api/groups/${groupId}/tags/${tagId}`), {
+                                method: 'DELETE',
+                                headers: authHeaders()
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Tag sync error:', e);
+                    }
+                };
+
+                const createGroup = async () => {
+                    if (newGroup.value.name.length < 3) {
+                        showToastMessage('El nombre debe tener al menos 3 caracteres', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(apiUrl('/api/groups'), {
+                            method: 'POST',
+                            headers: authHeaders(),
+                            body: JSON.stringify(newGroup.value)
+                        });
+
+                        if (response.ok) {
+                            const group = await response.json();
+                            groups.value.unshift(group);
+                            if (selectedTagIds.value.length) {
+                                await syncGroupTags(group.id, selectedTagIds.value);
+                                await fetchGroups();
+                            }
+                            showToastMessage('Grupo creado exitosamente');
+                            newGroup.value = { name: '', description: '', url: '' };
+                            selectedTagIds.value = [];
+                            activeTab.value = 'manage';
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al crear grupo', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+                };
+
+                const editGroup = (group) => {
+                    editingGroup.value = group;
+                    newGroup.value = {
+                        name: group.name,
+                        description: group.description,
+                        url: group.url || ''
+                    };
+                    selectedTagIds.value = (group.tags || []).map(t => t.id);
+                    activeTab.value = 'create';
+                };
+
+                const updateGroup = async () => {
+                    if (newGroup.value.name.length < 3) {
+                        showToastMessage('El nombre debe tener al menos 3 caracteres', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(apiUrl('/api/groups'), {
+                            method: 'PUT',
+                            headers: authHeaders(),
+                            body: JSON.stringify({
+                                id: editingGroup.value.id,
+                                name: newGroup.value.name,
+                                description: newGroup.value.description,
+                                url: newGroup.value.url
+                            })
+                        });
+
+                        if (response.ok) {
+                            await syncGroupTags(editingGroup.value.id, selectedTagIds.value);
+                            const updated = await response.json();
+                            const idx = groups.value.findIndex(g => g.id === updated.group.id);
+                            if (idx !== -1) {
+                                groups.value[idx] = updated.group;
+                            }
+                            await fetchGroups();
+                            showToastMessage('Grupo actualizado');
+                            cancelEdit();
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al actualizar', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+                };
+
+                const cancelEdit = () => {
+                    editingGroup.value = null;
+                    newGroup.value = { name: '', description: '', url: '' };
+                    selectedTagIds.value = [];
+                    activeTab.value = 'manage';
+                };
+
+                const confirmDelete = (group) => {
+                    groupToDelete.value = group;
+                    showDeleteConfirm.value = true;
+                };
+
+                const deleteGroup = async () => {
+                    if (!groupToDelete.value) return;
+
+                    try {
+                        const response = await fetch(apiUrl(`/api/groups/${groupToDelete.value.id}`), {
+                            method: 'DELETE',
+                            headers: authHeaders()
+                        });
+
+                        if (response.ok) {
+                            groups.value = groups.value.filter(g => g.id !== groupToDelete.value.id);
+                            showToastMessage('Grupo eliminado');
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al eliminar', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+
+                    showDeleteConfirm.value = false;
+                    groupToDelete.value = null;
+                };
+
+                const fetchImportantLinks = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/important-links'));
+                        importantLinks.value = await response.json();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                };
+
+                const createLink = async () => {
+                    if (newLink.value.title.length < 3) {
+                        showToastMessage('El título debe tener al menos 3 caracteres', 'error');
+                        return;
+                    }
+                    if (!newLink.value.url) {
+                        showToastMessage('La URL es requerida', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(apiUrl('/api/important-links'), {
+                            method: 'POST',
+                            headers: authHeaders(),
+                            body: JSON.stringify(newLink.value)
+                        });
+
+                        if (response.ok) {
+                            const link = await response.json();
+                            importantLinks.value.push(link);
+                            showToastMessage('Link creado');
+                            newLink.value = { title: '', description: '', url: '' };
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al crear', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+                };
+
+                const editLink = (link) => {
+                    editingLink.value = link;
+                    newLink.value = {
+                        title: link.title,
+                        description: link.description,
+                        url: link.url
+                    };
+                };
+
+                const updateLink = async () => {
+                    if (newLink.value.title.length < 3) {
+                        showToastMessage('El título debe tener al menos 3 caracteres', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(apiUrl('/api/important-links'), {
+                            method: 'PUT',
+                            headers: authHeaders(),
+                            body: JSON.stringify({
+                                id: editingLink.value.id,
+                                title: newLink.value.title,
+                                description: newLink.value.description,
+                                url: newLink.value.url
+                            })
+                        });
+
+                        if (response.ok) {
+                            const updated = await response.json();
+                            const idx = importantLinks.value.findIndex(l => l.id === updated.link.id);
+                            if (idx !== -1) {
+                                importantLinks.value[idx] = updated.link;
+                            }
+                            showToastMessage('Link actualizado');
+                            cancelLinkEdit();
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al actualizar', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+                };
+
+                const cancelLinkEdit = () => {
+                    editingLink.value = null;
+                    newLink.value = { title: '', description: '', url: '' };
+                };
+
+                const confirmDeleteLink = (link) => {
+                    linkToDelete.value = link;
+                    showDeleteLinkConfirm.value = true;
+                };
+
+                const deleteLink = async () => {
+                    if (!linkToDelete.value) return;
+
+                    try {
+                        const response = await fetch(apiUrl(`/api/important-links/${linkToDelete.value.id}`), {
+                            method: 'DELETE',
+                            headers: authHeaders()
+                        });
+
+                        if (response.ok) {
+                            importantLinks.value = importantLinks.value.filter(l => l.id !== linkToDelete.value.id);
+                            showToastMessage('Link eliminado');
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al eliminar', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+
+                    showDeleteLinkConfirm.value = false;
+                    linkToDelete.value = null;
+                };
+
+                const toggleTagSelection = (tagId) => {
+                    const idx = selectedTagIds.value.indexOf(tagId);
+                    if (idx === -1) {
+                        selectedTagIds.value.push(tagId);
+                    } else {
+                        selectedTagIds.value.splice(idx, 1);
+                    }
+                };
+
+                const fetchTags = async () => {
+                    try {
+                        const response = await fetch(apiUrl('/api/tags'));
+                        tags.value = await response.json();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                };
+
+                const createTag = async () => {
+                    tagError.value = '';
+                    const name = newTagName.value.trim();
+                    if (!name) {
+                        tagError.value = 'El nombre no puede estar vacío';
+                        return;
+                    }
+                    try {
+                        const response = await fetch(apiUrl('/api/tags'), {
+                            method: 'POST',
+                            headers: authHeaders(),
+                            body: JSON.stringify({ name })
+                        });
+                        if (response.ok) {
+                            const tag = await response.json();
+                            tags.value.push(tag);
+                            newTagName.value = '';
+                            showToastMessage('Tag creado');
+                        } else {
+                            const data = await response.json();
+                            tagError.value = data.detail || 'Error al crear tag';
+                        }
+                    } catch (e) {
+                        tagError.value = 'Error de conexión';
+                    }
+                };
+
+                const deleteTag = async (tag) => {
+                    try {
+                        const response = await fetch(apiUrl(`/api/tags/${tag.id}`), {
+                            method: 'DELETE',
+                            headers: authHeaders()
+                        });
+                        if (response.ok) {
+                            tags.value = tags.value.filter(t => t.id !== tag.id);
+                            showToastMessage('Tag eliminado');
+                        } else {
+                            const data = await response.json();
+                            showToastMessage(data.detail || 'Error al eliminar', 'error');
+                        }
+                    } catch (e) {
+                        showToastMessage('Error de conexión', 'error');
+                    }
+                };
+
+                onMounted(() => {
+                    checkLockout();
+                    fetchImportantLinks();
+                    fetchTags();
+                });
+
+                onUnmounted(() => {
+                    if (lockoutInterval.value) {
+                        clearInterval(lockoutInterval.value);
+                    }
+                });
+
+                return {
+                    password,
+                    isAdmin,
+                    token,
+                    error,
+                    lockoutRemaining,
+                    lockoutTimeRemaining,
+                    groups,
+                    searchQuery,
+                    filteredGroups,
+                    activeTab,
+                    newGroup,
+                    showToast,
+                    toastMessage,
+                    toastType,
+                    editingGroup,
+                    groupToDelete,
+                    showDeleteConfirm,
+                    importantLinks,
+                    tags,
+                    selectedTagIds,
+                    newTagName,
+                    tagError,
+                    newLink,
+                    editingLink,
+                    linkToDelete,
+                    showDeleteLinkConfirm,
+                    login,
+                    logout,
+                    fetchGroups,
+                    togglePin,
+                    createGroup,
+                    editGroup,
+                    updateGroup,
+                    cancelEdit,
+                    confirmDelete,
+                    deleteGroup,
+                    fetchImportantLinks,
+                    toggleTagSelection,
+                    fetchTags,
+                    createTag,
+                    deleteTag,
+                    lockoutInterval,
+                    createLink,
+                    editLink,
+                    updateLink,
+                    cancelLinkEdit,
+                    confirmDeleteLink,
+                    deleteLink
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

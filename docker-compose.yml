@@ -1,0 +1,14 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_NAME=${APP_NAME:-Groups}
+      - APP_DESCRIPTION=${APP_DESCRIPTION:-Directorio de grupos}
+      - DISCLAIMER=${DISCLAIMER:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - ENVIRONMENT=${ENVIRONMENT:-DEV}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./groups.db}
+      - ROOT_PATH=${ROOT_PATH:-}
+    restart: unless-stopped
