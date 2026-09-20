@@ -10,8 +10,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      VPS_IP: ${{ secrets.VPS_IP }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,16 +27,6 @@ jobs:
           provenance: false
           tags: ghcr.io/librecourseuy/${{ github.event.repository.name }}:latest
 
-      # Auto-deploy is enabled once VPS_IP / WATCHTOWER_TOKEN / SSH_PRIVATE_KEY
-      # secrets are configured on the repository.
-      - name: Trigger Watchtower via SSH tunnel
-        if: ${{ env.VPS_IP != '' }}
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_IP }}
-          username: deploy
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            curl -s -X POST \
-              -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" \
-              http://localhost:8080/v1/update
+      # To auto-deploy, configure VPS_IP / WATCHTOWER_TOKEN / SSH_PRIVATE_KEY
+      # repository secrets and add an appleboy/ssh-action step that POSTs to
+      # Watchtower, matching the other LibreCourseUY deployments.
