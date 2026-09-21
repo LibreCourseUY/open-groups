@@ -1,0 +1,416 @@
+{
+  "_warning": "This file records the schema that dbwarden expects the database to be in after the last migration. It is auto-generated and version-controlled. If accidentally deleted, restore from git (git checkout .dbwarden/model_state.*.json) or regenerate by running: dbwarden export-models. Without it, offline commands like make-migrations --offline will not work, but online operations are unaffected.",
+  "format_version": 2,
+  "exported_at": "2026-09-21T01:06:40Z",
+  "dbwarden_version": "0.12.5",
+  "tables": {
+    "group_tags": {
+      "name": "group_tags",
+      "columns": {
+        "group_id": {
+          "name": "group_id",
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": null,
+          "default": null,
+          "foreign_key": "groups(id)",
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "Int32"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "tag_id": {
+          "name": "tag_id",
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": null,
+          "default": null,
+          "foreign_key": "tags(id)",
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "Int32"
+          },
+          "my_column": {},
+          "sq_column": {}
+        }
+      },
+      "indexes": [],
+      "foreign_keys": [
+        {
+          "columns": [
+            "group_id"
+          ],
+          "referred_table": "groups",
+          "referred_columns": [
+            "id"
+          ],
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "deferrable": false,
+          "initially_deferred": false,
+          "match": null
+        },
+        {
+          "columns": [
+            "tag_id"
+          ],
+          "referred_table": "tags",
+          "referred_columns": [
+            "id"
+          ],
+          "on_delete": "CASCADE",
+          "on_update": "NO ACTION",
+          "deferrable": false,
+          "initially_deferred": false,
+          "match": null
+        }
+      ],
+      "checks": [],
+      "uniques": [],
+      "comment": null,
+      "object_type": "table",
+      "backend": null,
+      "backend_table_spec": {},
+      "schema": null
+    },
+    "groups": {
+      "name": "groups",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "Int32"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "name": {
+          "name": "name",
+          "type": "VARCHAR(255)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "description": {
+          "name": "description",
+          "type": "VARCHAR(500)",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "url": {
+          "name": "url",
+          "type": "VARCHAR(500)",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "pinned": {
+          "name": "pinned",
+          "type": "BOOLEAN",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": "FALSE",
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "Bool"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "DATETIME",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "DateTime"
+          },
+          "my_column": {},
+          "sq_column": {}
+        }
+      },
+      "indexes": [],
+      "foreign_keys": [],
+      "checks": [],
+      "uniques": [],
+      "comment": null,
+      "object_type": "table",
+      "backend": null,
+      "backend_table_spec": {},
+      "schema": null
+    },
+    "important_links": {
+      "name": "important_links",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "Int32"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "title": {
+          "name": "title",
+          "type": "VARCHAR(255)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "description": {
+          "name": "description",
+          "type": "VARCHAR(500)",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "url": {
+          "name": "url",
+          "type": "VARCHAR(500)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "DATETIME",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "DateTime"
+          },
+          "my_column": {},
+          "sq_column": {}
+        }
+      },
+      "indexes": [],
+      "foreign_keys": [],
+      "checks": [],
+      "uniques": [],
+      "comment": null,
+      "object_type": "table",
+      "backend": null,
+      "backend_table_spec": {},
+      "schema": null
+    },
+    "tags": {
+      "name": "tags",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "INTEGER",
+          "nullable": false,
+          "primary_key": true,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "Int32"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "name": {
+          "name": "name",
+          "type": "VARCHAR(50)",
+          "nullable": false,
+          "primary_key": false,
+          "unique": true,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "String"
+          },
+          "my_column": {},
+          "sq_column": {}
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "DATETIME",
+          "nullable": true,
+          "primary_key": false,
+          "unique": null,
+          "default": null,
+          "foreign_key": null,
+          "comment": null,
+          "autoincrement": "auto",
+          "pg_column": {},
+          "ch_column": {
+            "ch_type": "DateTime"
+          },
+          "my_column": {},
+          "sq_column": {}
+        }
+      },
+      "indexes": [],
+      "foreign_keys": [],
+      "checks": [],
+      "uniques": [
+        {
+          "columns": [
+            "name"
+          ],
+          "deferrable": false,
+          "initially_deferred": false
+        }
+      ],
+      "comment": null,
+      "object_type": "table",
+      "backend": null,
+      "backend_table_spec": {},
+      "schema": null
+    }
+  },
+  "indexes": {},
+  "constraints": {
+    "group_tags:foreign_key:0": {
+      "type": "foreign_key",
+      "table": "group_tags",
+      "columns": [
+        "group_id"
+      ],
+      "referenced_table": "groups",
+      "referenced_columns": [
+        "id"
+      ],
+      "on_delete": "CASCADE",
+      "on_update": "NO ACTION",
+      "deferrable": false
+    },
+    "group_tags:foreign_key:1": {
+      "type": "foreign_key",
+      "table": "group_tags",
+      "columns": [
+        "tag_id"
+      ],
+      "referenced_table": "tags",
+      "referenced_columns": [
+        "id"
+      ],
+      "on_delete": "CASCADE",
+      "on_update": "NO ACTION",
+      "deferrable": false
+    },
+    "tags:unique:uq_tags_name": {
+      "type": "unique",
+      "table": "tags",
+      "name": "uq_tags_name",
+      "columns": [
+        "name"
+      ],
+      "deferrable": false,
+      "initially_deferred": false
+    }
+  },
+  "enums": {},
+  "database": "default"
+}

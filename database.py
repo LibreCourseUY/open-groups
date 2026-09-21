@@ -13,7 +13,7 @@ Key Concepts:
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, relationship
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from datetime import datetime
 import os
@@ -38,6 +38,7 @@ database_config(
     database_type="postgresql" if ENVIRONMENT == "PROD" else "sqlite",
     database_url_sync=_sync_db_url,
     migrations_dir="migrations",
+    model_paths=["database.py"],
 )
 
 engine = create_async_engine(DATABASE_URL, echo=False, future=True)
@@ -61,12 +62,13 @@ class Base(DeclarativeBase):
     pass
 
 
-group_tags = Table(
-    "group_tags",
-    Base.metadata,
-    Column("group_id", Integer, ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True),
-    Column("tag_id", Integer, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
-)
+class GroupTag(Base):
+    """Association table linking groups and tags."""
+
+    __tablename__ = "group_tags"
+
+    group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True)
+    tag_id = Column(Integer, ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True)
 
 
 class Group(Base):
@@ -90,7 +92,7 @@ class Group(Base):
     url = Column(String(500))
     pinned = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now)
-    tags = relationship("Tag", secondary=group_tags, lazy="selectin")
+    tags = relationship("Tag", secondary="group_tags", lazy="selectin")
 
 
 class ImportantLink(Base):

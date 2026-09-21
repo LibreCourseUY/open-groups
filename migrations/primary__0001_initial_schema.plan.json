@@ -1,0 +1,36 @@
+{
+  "migration_id": "primary__0001_initial_schema",
+  "operations": [
+    {
+      "type": "create_table",
+      "table": "group_tags",
+      "severity": "INFO"
+    },
+    {
+      "type": "create_table",
+      "table": "groups",
+      "severity": "INFO"
+    },
+    {
+      "type": "create_table",
+      "table": "important_links",
+      "severity": "INFO"
+    },
+    {
+      "type": "create_table",
+      "table": "tags",
+      "severity": "INFO"
+    }
+  ],
+  "summary": {
+    "total_operations": 4,
+    "operation_counts": {
+      "create_table": 4
+    },
+    "create_tables": 4,
+    "drop_tables": 0,
+    "drop_columns": 0
+  },
+  "required_flags": [],
+  "checksum": "43866798d51caa8df71d8981074b784a1676e428eb7f1cab0b3df7d85931d165"
+}

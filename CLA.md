@@ -2,8 +2,8 @@
 
 ## LibreCourseUY
 
-**Last updated:** February 28, 2026  
-**Version:** 2.0
+**Last updated:** September 20, 2026  
+**Version:** 2.1
 
 ---
 
@@ -11,7 +11,7 @@
 
 LibreCourseUY is an open community dedicated to improving access to knowledge and building useful open resources in the public interest.
 
-The project welcomes contributions from students, teachers, developers, researchers, and the general public. It is community-led, independent, and not an official channel of any university, faculty, government body, or private institution.
+The project welcomes contributions from the general public. It is community-led, independent, and not an official channel of any university, faculty, government body, or private institution.
 
 This CLA governs the legal terms under which contributions are submitted and accepted. Community behavior, collaboration norms, and identity rules may also be governed by other project documents, including `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, and `TRADEMARK.md`.
 
