@@ -7,7 +7,7 @@ environment variables, run it with Docker or plain Python.
 - Admin panel (password protected) to create, edit, pin and tag groups
 - Optional "important links" section
 - SQLite by default, PostgreSQL in production
-- All branding comes from environment variables — no code changes needed
+- All branding comes from environment variables; no code changes needed
 
 ## Quick start
 
@@ -90,7 +90,7 @@ See `.env.example` for a copy-paste starting point.
 The schema is generated from the SQLAlchemy models with
 [dbwarden](https://docs.dbwarden.org/). The models live in `database.py`; the
 base migration is `migrations/primary__0001_initial_schema.sql`. Tags ship
-empty — they are created from the admin UI and saved to the database.
+empty; they are created from the admin UI and saved to the database.
 
 ```bash
 export DBWARDEN_CONFIG_MODULE=database PYTHONPATH=.
@@ -100,15 +100,15 @@ dbwarden migrate                                   # apply pending migrations
 
 ## API
 
-- `GET /healthz` — health probe
-- `GET /api/groups` — list/search groups (`?q=`, `?tag=`)
-- `POST /api/groups` — create (admin)
-- `PUT /api/groups` / `DELETE /api/groups/{id}` — update/delete (admin)
+- `GET /healthz`: health probe
+- `GET /api/groups`: list/search groups (`?q=`, `?tag=`)
+- `POST /api/groups`: create (admin)
+- `PUT /api/groups` / `DELETE /api/groups/{id}`: update/delete (admin)
 - `GET /api/tags`, `POST /api/tags`, `DELETE /api/tags/{id}` (admin for writes)
 - `POST /api/groups/{id}/tags`, `DELETE /api/groups/{id}/tags/{tag_id}` (admin)
 - `GET /api/important-links`, `POST` / `PUT` / `DELETE` (admin)
 - `POST /api/admin/login`, `GET /api/admin/status`
-- `GET /api/config` — branding for the frontend
+- `GET /api/config`: branding for the frontend
 
 Interactive API docs are served at `/docs` outside of `PROD`.
 
@@ -124,4 +124,4 @@ tests/         pytest suite
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT; see [LICENSE](LICENSE).
