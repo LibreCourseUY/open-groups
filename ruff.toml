@@ -1,5 +1,0 @@
-line-length = 100
-
-[lint]
-# main.py/database.py call load_dotenv() before importing app modules on purpose.
-ignore = ["E402"]

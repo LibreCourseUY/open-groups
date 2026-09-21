@@ -127,14 +127,18 @@ Use the Feature template available in the Issues section.
 
 ## How to Test Your Changes
 
-1. Run the application locally:
+1. Start the app locally:
    ```bash
-   docker-compose up --build
+   make dev     # or: docker compose up --build
    ```
 
-2. Verify your feature works correctly
+2. Run the checks:
+   ```bash
+   make test    # pytest
+   make lint    # ruff check + format check
+   ```
 
-3. If you add new code, verify it doesn't break anything existing
+3. Verify your feature works correctly and doesn't break anything existing
 
 ## Signed Commits (Required)
 

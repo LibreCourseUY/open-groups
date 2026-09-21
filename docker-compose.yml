@@ -2,8 +2,9 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8080"
     environment:
+      - PORT=8080
       - APP_NAME=${APP_NAME:-Groups}
       - APP_DESCRIPTION=${APP_DESCRIPTION:-Directorio de grupos}
       - DISCLAIMER=${DISCLAIMER:-}
@@ -13,4 +14,17 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-DEV}
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./groups.db}
       - ROOT_PATH=${ROOT_PATH:-}
+      - METRICS_API_KEY=${METRICS_API_KEY:-}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped

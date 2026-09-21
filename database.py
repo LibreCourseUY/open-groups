@@ -11,12 +11,22 @@ Key Concepts:
 - The database URL can be changed via DATABASE_URL environment variable
 """
 
-from sqlalchemy import create_engine, event, text
-from sqlalchemy.orm import sessionmaker, DeclarativeBase, relationship
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from datetime import datetime
 import os
+from datetime import datetime
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    create_engine,
+    event,
+    text,
+)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "DEV")
 
@@ -27,8 +37,14 @@ if ENVIRONMENT == "PROD":
     _sync_db_url = _db_url.replace("postgresql+asyncpg://", "postgresql://", 1)
     DATABASE_URL = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 else:
-    DATABASE_URL = _db_url if _db_url else "sqlite+aiosqlite:///./groups.db"
-    _sync_db_url = DATABASE_URL.replace("sqlite+aiosqlite:///", "sqlite:///", 1)
+    # Accept plain "sqlite://" from .env and normalize it to the async driver.
+    if not _db_url:
+        DATABASE_URL = "sqlite+aiosqlite:///./groups.db"
+    elif _db_url.startswith("sqlite://"):
+        DATABASE_URL = _db_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+    else:
+        DATABASE_URL = _db_url
+    _sync_db_url = DATABASE_URL.replace("sqlite+aiosqlite://", "sqlite://", 1)
 
 from dbwarden import database_config
 
@@ -58,8 +74,6 @@ class Base(DeclarativeBase):
     Base class for all database models.
     SQLAlchemy will create tables for all classes that inherit from this.
     """
-
-    pass
 
 
 class GroupTag(Base):
@@ -129,18 +143,14 @@ class Tag(Base):
 @event.listens_for(Group, "before_insert", propagate=True)
 def _group_before_insert(mapper, connection, target):
     if target.id is None:
-        result = connection.execute(
-            text("SELECT COALESCE(MAX(id), 0) + 1 FROM groups")
-        )
+        result = connection.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM groups"))
         target.id = result.scalar()
 
 
 @event.listens_for(Tag, "before_insert", propagate=True)
 def _tag_before_insert(mapper, connection, target):
     if target.id is None:
-        result = connection.execute(
-            text("SELECT COALESCE(MAX(id), 0) + 1 FROM tags")
-        )
+        result = connection.execute(text("SELECT COALESCE(MAX(id), 0) + 1 FROM tags"))
         target.id = result.scalar()
 
 

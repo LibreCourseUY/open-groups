@@ -16,26 +16,26 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Request, Depends
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
-import os
 import base64
 import hashlib
 import hmac
 import json
 import logging
+import os
 import secrets
 import time
+
 import httpx
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, field_validator
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 from datetime import datetime, timedelta
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import ENVIRONMENT, Group, ImportantLink, Tag, get_db
@@ -116,7 +116,9 @@ elif ENVIRONMENT == "PROD":
     raise RuntimeError("ADMIN_PASSWORD environment variable is required when ENVIRONMENT=PROD")
 else:
     ADMIN_PASSWORD = "admin123"
-    logger.warning("Using default admin password 'admin123'. Set ADMIN_PASSWORD env var for production.")
+    logger.warning(
+        "Using default admin password 'admin123'. Set ADMIN_PASSWORD env var for production."
+    )
 
 # In-memory IP lockout data. Tokens themselves are stateless (HMAC-signed)
 # so admin sessions survive restarts and multiple workers.
@@ -183,12 +185,8 @@ def verify_admin_dependency(request: Request):
 # METRICS CONFIGURATION
 # ============================================================================
 
-METRICS_EVENTS_URL = os.getenv(
-    "METRICS_EVENTS_URL", "https://api.eclipselabs.com.uy/metrics/event"
-)
-METRICS_VIEWS_URL = os.getenv(
-    "METRICS_VIEWS_URL", "https://api.eclipselabs.com.uy/metrics/views"
-)
+METRICS_EVENTS_URL = os.getenv("METRICS_EVENTS_URL", "https://api.eclipselabs.com.uy/metrics/event")
+METRICS_VIEWS_URL = os.getenv("METRICS_VIEWS_URL", "https://api.eclipselabs.com.uy/metrics/views")
 METRICS_API_KEY = os.getenv("METRICS_API_KEY", "")
 
 _metrics_client = httpx.AsyncClient(timeout=10.0)
@@ -196,15 +194,15 @@ _metrics_client = httpx.AsyncClient(timeout=10.0)
 
 class MetricsEvent(BaseModel):
     event_type: str
-    metadata: Optional[dict] = None
+    metadata: dict | None = None
 
 
 class ViewEvent(BaseModel):
     path: str
-    referrer: Optional[str] = None
-    user_agent: Optional[str] = None
-    viewport: Optional[str] = None
-    document_title: Optional[str] = None
+    referrer: str | None = None
+    user_agent: str | None = None
+    viewport: str | None = None
+    document_title: str | None = None
 
 
 # ============================================================================
@@ -278,7 +276,7 @@ def fuzzy_match(query: str, text: str, threshold: float = 0.3) -> float:
     return 0.0
 
 
-def fuzzy_search(query: str, groups: List, threshold: float = 0.3):
+def fuzzy_search(query: str, groups: list, threshold: float = 0.3):
     """
     Search for groups using fuzzy matching on both name and description.
     Groups are sorted by relevance score (highest first).
@@ -357,7 +355,9 @@ class GroupTagAction(BaseModel):
 
 
 @app.get("/api/groups")
-async def get_groups(q: Optional[str] = None, tag: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def get_groups(
+    q: str | None = None, tag: str | None = None, db: AsyncSession = Depends(get_db)
+):
     """
     Get all groups, optionally filtered by search query or tag.
 
@@ -396,10 +396,13 @@ def group_to_dict(group: Group):
 
 
 @app.post("/api/groups")
-async def create_group(group: GroupCreate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
-    new_group = Group(
-        name=group.name, description=group.description, url=group.url, pinned=False
-    )
+async def create_group(
+    group: GroupCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
+    new_group = Group(name=group.name, description=group.description, url=group.url, pinned=False)
     db.add(new_group)
     await db.commit()
     await db.refresh(new_group)
@@ -407,7 +410,12 @@ async def create_group(group: GroupCreate, request: Request, db: AsyncSession = 
 
 
 @app.put("/api/groups")
-async def update_group(group: GroupUpdate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+async def update_group(
+    group: GroupUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
     result = await db.execute(select(Group).filter(Group.id == group.id))
     db_group = result.scalar_one_or_none()
     if not db_group:
@@ -422,7 +430,12 @@ async def update_group(group: GroupUpdate, request: Request, db: AsyncSession = 
 
 
 @app.delete("/api/groups/{group_id}")
-async def delete_group(group_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+async def delete_group(
+    group_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
     result = await db.execute(select(Group).filter(Group.id == group_id))
     db_group = result.scalar_one_or_none()
     if not db_group:
@@ -435,7 +448,9 @@ async def delete_group(group_id: int, request: Request, db: AsyncSession = Depen
 
 @app.get("/api/groups/{group_id}")
 async def get_group(group_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id))
+    result = await db.execute(
+        select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id)
+    )
     group = result.scalar_one_or_none()
     if not group:
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
@@ -443,7 +458,12 @@ async def get_group(group_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @app.post("/api/groups/pin")
-async def pin_group(pin_data: PinGroup, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+async def pin_group(
+    pin_data: PinGroup,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
     result = await db.execute(select(Group).filter(Group.id == pin_data.group_id))
     db_group = result.scalar_one_or_none()
     if not db_group:
@@ -532,11 +552,23 @@ def admin_status(request: Request):
 async def get_tags(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Tag).order_by(Tag.name))
     tags = result.scalars().all()
-    return [{"id": t.id, "name": t.name, "created_at": t.created_at.isoformat() if t.created_at else None} for t in tags]
+    return [
+        {
+            "id": t.id,
+            "name": t.name,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        }
+        for t in tags
+    ]
 
 
 @app.post("/api/tags")
-async def create_tag(tag: TagCreate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+async def create_tag(
+    tag: TagCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
     existing = await db.execute(select(Tag).filter(Tag.name == tag.name))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Tag ya existe")
@@ -548,7 +580,12 @@ async def create_tag(tag: TagCreate, request: Request, db: AsyncSession = Depend
 
 
 @app.delete("/api/tags/{tag_id}")
-async def delete_tag(tag_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
+async def delete_tag(
+    tag_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
     result = await db.execute(select(Tag).filter(Tag.id == tag_id))
     tag = result.scalar_one_or_none()
     if not tag:
@@ -559,8 +596,16 @@ async def delete_tag(tag_id: int, request: Request, db: AsyncSession = Depends(g
 
 
 @app.post("/api/groups/{group_id}/tags")
-async def add_group_tag(group_id: int, action: GroupTagAction, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
-    result = await db.execute(select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id))
+async def add_group_tag(
+    group_id: int,
+    action: GroupTagAction,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
+    result = await db.execute(
+        select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id)
+    )
     group = result.scalar_one_or_none()
     if not group:
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
@@ -575,8 +620,16 @@ async def add_group_tag(group_id: int, action: GroupTagAction, request: Request,
 
 
 @app.delete("/api/groups/{group_id}/tags/{tag_id}")
-async def remove_group_tag(group_id: int, tag_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)):
-    result = await db.execute(select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id))
+async def remove_group_tag(
+    group_id: int,
+    tag_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
+):
+    result = await db.execute(
+        select(Group).options(selectinload(Group.tags)).filter(Group.id == group_id)
+    )
     group = result.scalar_one_or_none()
     if not group:
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
@@ -639,11 +692,12 @@ async def get_important_links(db: AsyncSession = Depends(get_db)):
 
 @app.post("/api/important-links")
 async def create_important_link(
-    link: ImportantLinkCreate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)
+    link: ImportantLinkCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
 ):
-    new_link = ImportantLink(
-        title=link.title, description=link.description, url=link.url
-    )
+    new_link = ImportantLink(title=link.title, description=link.description, url=link.url)
     db.add(new_link)
     await db.commit()
     await db.refresh(new_link)
@@ -652,7 +706,10 @@ async def create_important_link(
 
 @app.put("/api/important-links")
 async def update_important_link(
-    link: ImportantLinkUpdate, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)
+    link: ImportantLinkUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
 ):
     result = await db.execute(select(ImportantLink).filter(ImportantLink.id == link.id))
     db_link = result.scalar_one_or_none()
@@ -669,7 +726,10 @@ async def update_important_link(
 
 @app.delete("/api/important-links/{link_id}")
 async def delete_important_link(
-    link_id: int, request: Request, db: AsyncSession = Depends(get_db), _=Depends(verify_admin_dependency)
+    link_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(verify_admin_dependency),
 ):
     result = await db.execute(select(ImportantLink).filter(ImportantLink.id == link_id))
     db_link = result.scalar_one_or_none()
