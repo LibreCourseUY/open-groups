@@ -14,6 +14,5 @@ Makefile
 README.md
 SPEC.md
 CONTRIBUTING.md
-CLA.md
 docker-compose*.yml
 .env

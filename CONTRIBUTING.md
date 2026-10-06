@@ -161,18 +161,15 @@ Configure Git to sign commits by default:
 git config --global commit.gpgsign true
 ```
 
-## Contributor License Agreement (CLA)
+## Developer Certificate of Origin (DCO)
 
-Before contributing, you must read and accept our [Contributor License Agreement (CLA)](https://librecourseuy.github.io/CLA).
+All contributions are certified under the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). Sign off every commit:
 
-By submitting a Pull Request with cryptographically signed commits, you acknowledge and agree to the CLA terms. This includes:
+```bash
+git commit -s
+```
 
-- Licensing your contribution under MIT
-- Confirming you have the rights to contribute the code
-- Accepting the project's non-affiliation with any institution
-- Understanding that all commits must be GPG-signed as acceptance of the CLA
-
-Contributions without signed commits or that do not accept the CLA may be rejected.
+This adds a `Signed-off-by: Your Name <you@example.com>` line certifying that you have the right to submit the contribution under the project's license and that you accept the project's non-affiliation with any institution. Commits without a `Signed-off-by` line may be rejected.
 
 ## Questions?
 
